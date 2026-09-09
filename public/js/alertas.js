@@ -75,18 +75,67 @@ async function cargarGruposAlertas() {
     try {
         const response = await fetch('/api/alertas/list');
         gruposAlertas = await response.json();
-        const select = document.getElementById('alertaGrupoSelect');
-        select.innerHTML = '<option value="">Seleccionar curso...</option>';
-        gruposAlertas.forEach(g => {
-            const option = document.createElement('option');
-            option.value = g.id;
-            option.textContent = `${g.nombre_materia} - ${g.curso} (${g.paralelo}) - ${g.especialidad || 'Sin especialidad'} [${g.total_estudiantes} students]`;
-            select.appendChild(option);
-        });
+        poblarFiltrosAlertas(gruposAlertas);
+        filtrarGrupos();
     } catch (err) {
         console.error('Error:', err);
         showNotification('Error al cargar cursos', 'danger');
     }
+}
+
+function poblarFiltrosAlertas(datos) {
+    const cursos = [...new Set(datos.map(g => g.curso).filter(Boolean))].sort();
+    const paralelos = [...new Set(datos.map(g => g.paralelo).filter(Boolean))].sort();
+    const materias = [...new Set(datos.map(g => g.nombre_materia).filter(Boolean))].sort();
+    const especialidades = [...new Set(datos.map(g => g.especialidad).filter(Boolean))].sort();
+
+    const selCurso = document.getElementById('filtroCurso');
+    const selParalelo = document.getElementById('filtroParalelo');
+    const selMateria = document.getElementById('filtroMateria');
+    const selEspecialidad = document.getElementById('filtroEspecialidad');
+
+    if (selCurso) {
+        cursos.forEach(c => { selCurso.innerHTML += `<option value="${c}">${c}</option>`; });
+    }
+    if (selParalelo) {
+        paralelos.forEach(p => { selParalelo.innerHTML += `<option value="${p}">${p}</option>`; });
+    }
+    if (selMateria) {
+        materias.forEach(m => { selMateria.innerHTML += `<option value="${m}">${m}</option>`; });
+    }
+    if (selEspecialidad) {
+        especialidades.forEach(e => { selEspecialidad.innerHTML += `<option value="${e}">${e}</option>`; });
+    }
+}
+
+function filtrarGrupos() {
+    const curso = document.getElementById('filtroCurso')?.value || '';
+    const paralelo = document.getElementById('filtroParalelo')?.value || '';
+    const materia = document.getElementById('filtroMateria')?.value || '';
+    const especialidad = document.getElementById('filtroEspecialidad')?.value || '';
+
+    let filtrados = gruposAlertas;
+    if (curso) filtrados = filtrados.filter(g => g.curso === curso);
+    if (paralelo) filtrados = filtrados.filter(g => g.paralelo === paralelo);
+    if (materia) filtrados = filtrados.filter(g => g.nombre_materia === materia);
+    if (especialidad) filtrados = filtrados.filter(g => g.especialidad === especialidad);
+
+    const select = document.getElementById('alertaGrupoSelect');
+    select.innerHTML = '<option value="">Seleccionar curso...</option>';
+    filtrados.forEach(g => {
+        const option = document.createElement('option');
+        option.value = g.id;
+        option.textContent = `${g.nombre_materia} - ${g.curso} (${g.paralelo}) - ${g.especialidad || 'Sin especialidad'} [${g.total_estudiantes} students]`;
+        select.appendChild(option);
+    });
+}
+
+function limpiarFiltrosAlertas() {
+    ['filtroCurso', 'filtroParalelo', 'filtroMateria', 'filtroEspecialidad'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    filtrarGrupos();
 }
 
 async function cargarAlertas() {

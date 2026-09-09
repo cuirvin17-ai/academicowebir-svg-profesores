@@ -26,6 +26,35 @@
                 <h4 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Alertas Estudiantiles</h4>
             </div>
             <div class="card-body">
+                <div class="row mb-3" id="filtrosAlertas">
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Curso</label>
+                        <select id="filtroCurso" class="form-select form-select-sm" onchange="filtrarGrupos()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Paralelo</label>
+                        <select id="filtroParalelo" class="form-select form-select-sm" onchange="filtrarGrupos()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Materia</label>
+                        <select id="filtroMateria" class="form-select form-select-sm" onchange="filtrarGrupos()">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Especialidad</label>
+                        <select id="filtroEspecialidad" class="form-select form-select-sm" onchange="filtrarGrupos()">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-outline-secondary btn-sm w-100" onclick="limpiarFiltrosAlertas()"><i class="fas fa-times me-1"></i>Limpiar</button>
+                    </div>
+                </div>
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Curso / Grupo</label>
