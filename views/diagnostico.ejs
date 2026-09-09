@@ -479,6 +479,43 @@
             if (!tabla || tabla.rows.length <= 1) return alert('No hay datos para exportar');
             const grupo = document.getElementById('nombreGrupoDiag').textContent;
             const materia = document.getElementById('materia_diag').value;
+            const modoLabel = getModoCalculo() === 'suma' ? 'Suma' : 'Promedio';
+
+            let pdfHtml = `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:11px;">
+                <thead><tr style="background:#4a7fc1;color:#fff;">
+                    <th>Estudiante</th>`;
+            for (let i = 1; i <= numDestrezas; i++) {
+                pdfHtml += `<th style="text-align:center">${nombresDestrezas[i] || 'D'+i}</th>`;
+            }
+            pdfHtml += `<th style="text-align:center">${modoLabel}</th>
+                <th style="text-center">Descripcion</th></tr></thead><tbody>`;
+
+            const inputs = tabla.querySelectorAll('tr[data-estudiante]');
+            inputs.forEach(tr => {
+                const estId = tr.dataset.estudiante;
+                const nombre = tr.cells[0].textContent;
+                pdfHtml += `<tr><td>${nombre}</td>`;
+                for (let i = 0; i < numDestrezas; i++) {
+                    const inp = tr.querySelector(`input[data-idx="${i}"]`);
+                    pdfHtml += `<td style="text-align:center">${inp ? (inp.value || '-') : '-'}</td>`;
+                }
+                const totalEl = tr.querySelector(`.total-${estId}`);
+                const descEl = tr.querySelector(`.desc-${estId}`);
+                pdfHtml += `<td style="text-align:center;font-weight:bold">${totalEl ? totalEl.textContent : '-'}</td>`;
+                pdfHtml += `<td style="text-align:center">${descEl ? descEl.textContent : '-'}</td></tr>`;
+            });
+
+            const promRow = tabla.querySelector('tr.table-secondary');
+            if (promRow) {
+                pdfHtml += `<tr style="background:#e9ecef;font-weight:bold"><td>PROMEDIOS</td>`;
+                const cells = promRow.querySelectorAll('td');
+                for (let i = 1; i < cells.length; i++) {
+                    pdfHtml += `<td style="text-align:center">${cells[i].textContent}</td>`;
+                }
+                pdfHtml += '</tr>';
+            }
+            pdfHtml += '</tbody></table>';
+
             const config = {
                 margin: [10, 5, 10, 5],
                 filename: `Diagnostico_${materia}_${grupo}.pdf`,
@@ -488,7 +525,7 @@
             };
             const div = document.createElement('div');
             div.innerHTML = `<h4 style="text-align:center;margin-bottom:5px;">Prueba de Diagnostico</h4>
-                <h5 style="text-align:center;margin-bottom:10px;">${materia} - ${grupo}</h5>` + tabla.outerHTML;
+                <h5 style="text-align:center;margin-bottom:10px;">${materia} - ${grupo}</h5>` + pdfHtml;
             html2pdf().set(config).from(div).save();
         }
 
