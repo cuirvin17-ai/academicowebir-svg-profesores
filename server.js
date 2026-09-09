@@ -172,7 +172,7 @@ app.use('/api/rector', requireAuth, requireRole('rector'), injectDB, rectorRoute
 app.use('/api/anio-lectivos', requireAuth, requireRole('rector'), injectDB, anioLectivosRoutes);
 
 // Inspector: solo inspector
-app.use('/api/inspector', requireAuth, requireRole('inspector'), inspectorRoutes);
+app.use('/api/inspector', requireAuth, requireRole('inspector'), injectDB, inspectorRoutes);
 
 // Rutas compartidas: todos los roles autenticados
 app.use('/', requireAuth, injectDB, indexRoutes);
