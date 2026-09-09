@@ -5,7 +5,7 @@ const router = express.Router();
 // Renderizar vista de notas
 router.get('/view', (req, res) => {
     const db = req.db;
-    res.render('notas');
+    res.render('notas', { user: req.session.user });
 });
 
 // Obtener porcentajes configurados
