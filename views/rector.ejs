@@ -53,6 +53,11 @@
                             <i class="fas fa-user-tie me-1"></i>Tutores
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tabSesiones" onclick="cargarSesionesActivas()">
+                            <i class="fas fa-users me-1"></i>Conectados
+                        </a>
+                    </li>
                 </ul>
 
                 <div class="tab-content">
@@ -256,6 +261,38 @@
                                         </thead>
                                         <tbody id="cuerpoTutores"></tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: Usuarios Conectados -->
+                    <div class="tab-pane fade" id="tabSesiones">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-users me-1"></i>Usuarios Conectados</span>
+                                <button class="btn btn-sm btn-outline-primary" onclick="cargarSesionesActivas()">
+                                    <i class="fas fa-sync me-1"></i>Actualizar
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm table-hover">
+                                        <thead class="table-dark text-center">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Cedula</th>
+                                                <th>Nombre</th>
+                                                <th>Rol</th>
+                                                <th>Tiempo Restante</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cuerpoSesiones"></tbody>
+                                    </table>
+                                </div>
+                                <div id="sinSesiones" class="text-center text-muted py-4" style="display:none;">
+                                    <i class="fas fa-user-slash fa-3x mb-3"></i>
+                                    <p>No hay usuarios conectados en este momento</p>
                                 </div>
                             </div>
                         </div>
@@ -859,6 +896,36 @@
             tutoresData.forEach(t => {
                 sel.innerHTML += `<option value="${t.id}">${t.nombre} (${t.cedula})</option>`;
             });
+        }
+
+        async function cargarSesionesActivas() {
+            try {
+                const res = await fetch('/api/rector/sesiones-activas');
+                const sesiones = await res.json();
+                const tbody = document.getElementById('cuerpoSesiones');
+                const sinSesiones = document.getElementById('sinSesiones');
+                if (sesiones.length === 0) {
+                    tbody.innerHTML = '';
+                    sinSesiones.style.display = 'block';
+                    return;
+                }
+                sinSesiones.style.display = 'none';
+                let html = '';
+                sesiones.forEach((s, i) => {
+                    const rolBadge = s.rol === 'rector' ? 'bg-danger' : s.rol === 'docente' ? 'bg-primary' : s.rol === 'secretaria' ? 'bg-success' : 'bg-secondary';
+                    html += `
+                        <tr>
+                            <td class="text-center">${i + 1}</td>
+                            <td class="text-center">${s.cedula}</td>
+                            <td>${s.nombre}</td>
+                            <td class="text-center"><span class="badge ${rolBadge}">${s.rol}</span></td>
+                            <td class="text-center">${s.minutos_restantes} min</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.error('Error cargando sesiones:', err);
+            }
         }
 
         function abrirModalTutor() {

@@ -414,4 +414,31 @@ router.delete('/asignacion-tutores/:id', async (req, res) => {
     }
 });
 
+// ========== SESIONES ACTIVAS ==========
+router.get('/sesiones-activas', async (req, res) => {
+    try {
+        const db = req.db;
+        const [sessions] = await db.query(
+            'SELECT session_id, data, expires FROM sessions WHERE expires > UNIX_TIMESTAMP()'
+        );
+        const now = Math.floor(Date.now() / 1000);
+        const users = sessions.map(s => {
+            try {
+                const parsed = JSON.parse(s.data);
+                return {
+                    session_id: s.session_id,
+                    nombre: parsed.user?.nombre || 'Desconocido',
+                    cedula: parsed.user?.cedula || '',
+                    rol: parsed.user?.rol || '',
+                    expires: s.expires,
+                    minutos_restantes: Math.round((s.expires - now) / 60)
+                };
+            } catch { return null; }
+        }).filter(Boolean);
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
