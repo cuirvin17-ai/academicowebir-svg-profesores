@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 router.get('/view', (req, res) => {
-    res.render('diagnostico');
+    res.render('diagnostico', { user: req.session.user });
 });
 
 router.get('/materias', async (req, res) => {
