@@ -1185,6 +1185,7 @@ function exportarPDFNotas() {
         return;
     }
     const grupo = document.getElementById('nombreGrupoSeleccionado').textContent || '';
+    const materia = document.getElementById('materia_notas').value || '';
     const trimestreVal = document.getElementById('trimestre_notas').value || '';
     const trimestreText = trimestreVal === 'final' ? 'Promedio Final' : `Trimestre ${trimestreVal}`;
 
@@ -1219,7 +1220,7 @@ function exportarPDFNotas() {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
     const div = document.createElement('div');
-    div.innerHTML = '<h4 style="text-align:center; margin-bottom:5px;">Notas - ' + grupo + ' - ' + trimestreText + '</h4><p style="text-align:center; margin-bottom:10px;"><strong>Docente:</strong> ' + (typeof nombreDocente !== 'undefined' ? nombreDocente : '') + '</p>';
+    div.innerHTML = '<h4 style="text-align:center; margin-bottom:5px;">Notas - ' + materia + ' - ' + grupo + ' - ' + trimestreText + '</h4><p style="text-align:center; margin-bottom:10px;"><strong>Docente:</strong> ' + (typeof nombreDocente !== 'undefined' ? nombreDocente : '') + '</p>';
     div.appendChild(clone);
     html2pdf().set(config).from(div).save();
 }
