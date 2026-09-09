@@ -18,13 +18,14 @@ router.get('/list', async (req, res) => {
             FROM grupos g
             INNER JOIN materias m ON g.materia_id = m.id
             LEFT JOIN tutores t ON m.tutor_id = t.id
+            WHERE g.school_id = ?
         `;
-        const params = [];
+        const params = [user.school_id];
         if (user.rol === 'docente') {
-            query += ' WHERE m.docente_id = ?';
+            query += ' AND m.docente_id = ?';
             params.push(user.id);
         }
-        query += ' GROUP BY g.nombre_grupo, g.materia_id, m.nombre_materia, m.curso, m.paralelo, m.especialidad, t.nombre, t.telefono ORDER BY m.nombre_materia';
+        query += ' GROUP BY g.nombre_grupo, g.materia_id, m.nombre_materia, m.curso, m.paralelo, m.especialidad, m.docente_id, t.nombre, t.telefono ORDER BY m.nombre_materia';
         const [materias] = await db.query(query, params);
         res.json(materias);
     } catch (err) {
