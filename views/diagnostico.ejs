@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="/js/main.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         .nota-input { width: 70px; text-align: center; }
         .total-cell { font-weight: bold; font-size: 1.1em; }
@@ -68,6 +69,9 @@
                             </button>
                             <button class="btn btn-sm btn-primary" onclick="guardarDiagnosticos()">
                                 <i class="fas fa-save"></i> Guardar
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="exportarPDFDiagnostico()">
+                                <i class="fas fa-file-pdf"></i> PDF
                             </button>
                         </div>
                     </div>
@@ -468,6 +472,24 @@
             if (numDestrezas <= 1) return alert('Debe haber al menos una destreza');
             numDestrezas--;
             renderTablaDiag();
+        }
+
+        function exportarPDFDiagnostico() {
+            const tabla = document.getElementById('tablaDiag');
+            if (!tabla || tabla.rows.length <= 1) return alert('No hay datos para exportar');
+            const grupo = document.getElementById('nombreGrupoDiag').textContent;
+            const materia = document.getElementById('materia_diag').value;
+            const config = {
+                margin: [10, 5, 10, 5],
+                filename: `Diagnostico_${materia}_${grupo}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+            const div = document.createElement('div');
+            div.innerHTML = `<h4 style="text-align:center;margin-bottom:5px;">Prueba de Diagnostico</h4>
+                <h5 style="text-align:center;margin-bottom:10px;">${materia} - ${grupo}</h5>` + tabla.outerHTML;
+            html2pdf().set(config).from(div).save();
         }
 
         async function guardarDiagnosticos() {
