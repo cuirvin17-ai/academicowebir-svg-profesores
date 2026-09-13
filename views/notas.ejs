@@ -11,6 +11,7 @@
     <script src="/js/main.js" defer></script>
     <script src="/js/notas.js?v=3" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container-fluid vh-100 d-flex flex-column">
@@ -128,6 +129,9 @@
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="exportarPDFNotas()">
                                 <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="exportarExcelNotas()">
+                                <i class="fas fa-file-excel"></i> Excel
                             </button>
                         </div>
                     </div>

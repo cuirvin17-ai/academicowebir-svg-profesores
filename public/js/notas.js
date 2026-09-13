@@ -1224,3 +1224,82 @@ function exportarPDFNotas() {
     div.appendChild(clone);
     html2pdf().set(config).from(div).save();
 }
+
+function exportarExcelNotas() {
+    const tabla = document.getElementById('tablaNotas');
+    if (!tabla || tabla.querySelector('tbody').rows.length === 0) {
+        showNotification('No hay datos para exportar', 'warning');
+        return;
+    }
+    if (typeof XLSX === 'undefined') {
+        showNotification('Librería Excel no cargada. Recargue la página.', 'danger');
+        return;
+    }
+
+    const grupo = document.getElementById('nombreGrupoSeleccionado').textContent || '';
+    const materia = document.getElementById('materia_notas').value || '';
+    const trimestreVal = document.getElementById('trimestre_notas').value || '';
+    const trimestreText = trimestreVal === 'final' ? 'Promedio Final' : `Trimestre ${trimestreVal}`;
+
+    const data = [];
+
+    // Encabezados - fila 1 (grupos)
+    const thead1 = tabla.querySelectorAll('thead tr')[0];
+    const thead2 = tabla.querySelectorAll('thead tr')[1];
+    if (thead1 && thead2) {
+        const headers = [];
+        const cells1 = thead1.querySelectorAll('th');
+        const cells2 = thead2.querySelectorAll('th');
+        let colspan = 0;
+        for (const th of cells1) {
+            const cs = parseInt(th.getAttribute('colspan')) || 1;
+            const text = th.textContent.trim();
+            if (cs > 1) {
+                for (let i = 0; i < cs; i++) {
+                    headers.push(text);
+                }
+            } else {
+                const text2 = cells2[colspan] ? cells2[colspan].textContent.trim() : '';
+                headers.push(text2 || text);
+            }
+            colspan += cs;
+        }
+        // Ensure headers match column count
+        while (headers.length < cells2.length) headers.push('');
+        data.push(headers);
+    }
+
+    // Filas de datos
+    const tbody = tabla.querySelector('tbody');
+    const rows = tbody.querySelectorAll('tr[data-estudiante]');
+    rows.forEach(tr => {
+        const row = [];
+        const cells = tr.querySelectorAll('td');
+        cells.forEach(td => {
+            const input = td.querySelector('input');
+            if (input) {
+                row.push(input.value !== '' ? parseFloat(input.value) : '');
+            } else {
+                const text = td.textContent.trim();
+                row.push(text === '-' || text === '' ? '' : text);
+            }
+        });
+        data.push(row);
+    });
+
+    // Fila de promedios
+    const promRow = tbody.querySelector('tr.table-secondary');
+    if (promRow) {
+        const row = [];
+        promRow.querySelectorAll('td').forEach(td => {
+            row.push(td.textContent.trim());
+        });
+        data.push(row);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 25 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Notas');
+    XLSX.writeFile(wb, `Notas_${materia}_${grupo}_${trimestreText.replace(/\s/g, '_')}.xlsx`);
+}
