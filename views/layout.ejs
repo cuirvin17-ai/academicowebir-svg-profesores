@@ -6,6 +6,7 @@
     <title>Sistema de Gestión Académica</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <% if (typeof pageScript !== 'undefined') { %>
         <script src="/js/<%= pageScript %>.js" defer></script>
@@ -15,16 +16,16 @@
 <body>
     <div class="container-fluid vh-100 d-flex flex-column">
         <!-- Header -->
-        <header class="bg-primary text-white p-3 shadow">
+        <header class="bg-header text-white p-3 shadow">
             <div class="container">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h1 class="h4 mb-0">
-                        <img src="/images/sucua2.png" alt="Logo" style="width:40px; height:40px; border-radius:50%; margin-right:8px;">
+                    <h1 class="h5 mb-0 d-flex align-items-center">
+                        <img src="/images/sucua2.png" alt="Logo" style="width:40px; height:40px; border-radius:50%; margin-right:10px; border: 2px solid rgba(255,255,255,0.3);">
                         Sistema de Gestión Académica
                     </h1>
                     <nav>
-                        <button class="btn btn-outline-light btn-sm" onclick="showMenu()">
-                            <i class="fas fa-home me-1"></i> Menú Principal
+                        <button class="btn-menu" onclick="showMenu()">
+                            <i class="fas fa-home me-1"></i> Menu
                         </button>
                     </nav>
                 </div>
@@ -32,32 +33,32 @@
         </header>
 
         <!-- Main Content -->
-        <main class="flex-grow-1 overflow-auto py-3">
+        <main class="flex-grow-1 overflow-auto py-3" style="background: #f0f4f8;">
             <div class="container">
                 <%- body %>
             </div>
         </main>
 
         <!-- Footer -->
-        <footer class="bg-light text-center p-2 border-top">
-            <small class="text-muted">&copy; 2026 Sistema de Gestión Académica - Clave: Betoben1</small>
+        <footer class="bg-footer text-center p-2">
+            <small>&copy; 2026 Sistema de Gestion Academica</small>
         </footer>
     </div>
 
     <!-- Modal de confirmación -->
     <div class="modal fade" id="confirmModal" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirmar acción</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-content" style="border-radius: 12px; border: none;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; border-radius: 12px 12px 0 0;">
+                    <h5 class="modal-title" style="font-weight: 600;">Confirmar accion</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p id="confirmMessage">¿Está seguro de realizar esta acción?</p>
+                <div class="modal-body" style="padding: 20px;">
+                    <p id="confirmMessage" style="margin: 0; color: #37474f;">¿Esta seguro de realizar esta accion?</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="confirmBtn">Confirmar</button>
+                <div class="modal-footer" style="border-top: 1px solid #e0e0e0;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmBtn" style="border-radius: 8px;">Confirmar</button>
                 </div>
             </div>
         </div>
