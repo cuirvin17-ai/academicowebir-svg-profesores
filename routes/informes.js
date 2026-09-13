@@ -44,12 +44,23 @@ router.get('/acta/:grupo_id/trimestre/:trimestre', async (req, res) => {
         const [materiaInfo] = await db.query('SELECT nombre_materia, curso, paralelo, especialidad FROM materias WHERE id = ?', [materia_id]);
         const materia = materiaInfo.length > 0 ? materiaInfo[0] : {};
 
-        const [pctsActa] = await db.query('SELECT concepto, porcentaje FROM configuracion_porcentajes');
-        const pctMapActa = {};
-        pctsActa.forEach(p => { pctMapActa[p.concepto] = parseFloat(p.porcentaje); });
-        const pctTareas = pctMapActa['promedio_tareas'] || 70;
-        const pctProyecto = pctMapActa['proyecto'] || 15;
-        const pctExamen = pctMapActa['examen'] || 15;
+        let pctTareas = 70, pctProyecto = 15, pctExamen = 15;
+        const [configPctActa] = await db.query(
+            'SELECT promedio_tareas, proyecto, examen FROM configuracion_porcentajes_materia_curso WHERE materia_id = ? AND curso = ? AND paralelo = ? AND (especialidad = ? OR (especialidad IS NULL AND ? IS NULL))',
+            [materia_id, materia.curso, materia.paralelo, materia.especialidad, materia.especialidad]
+        );
+        if (configPctActa.length > 0) {
+            pctTareas = parseFloat(configPctActa[0].promedio_tareas) ?? 70;
+            pctProyecto = parseFloat(configPctActa[0].proyecto) ?? 15;
+            pctExamen = parseFloat(configPctActa[0].examen) ?? 15;
+        } else {
+            const [pctsActa] = await db.query('SELECT concepto, porcentaje FROM configuracion_porcentajes');
+            const pctMapActa = {};
+            pctsActa.forEach(p => { pctMapActa[p.concepto] = parseFloat(p.porcentaje); });
+            pctTareas = pctMapActa['promedio_tareas'] ?? 70;
+            pctProyecto = pctMapActa['proyecto'] ?? 15;
+            pctExamen = pctMapActa['examen'] ?? 15;
+        }
 
         const [estudiantes] = await db.query(`
             SELECT g.id as grupo_id, e.cedula, e.nombres_apellidos, e.sexo, e.discapacidad,
@@ -148,12 +159,23 @@ router.get('/asignatura/:grupo_id/trimestre/:trimestre', async (req, res) => {
         if (materiaInfo.length === 0) return res.status(404).json({ error: 'Materia no encontrada' });
         const materia = materiaInfo[0];
 
-        const [pcts] = await db.query('SELECT concepto, porcentaje FROM configuracion_porcentajes');
-        const pctMap = {};
-        pcts.forEach(p => { pctMap[p.concepto] = parseFloat(p.porcentaje); });
-        const pctTareas = pctMap['promedio_tareas'] || 70;
-        const pctProyecto = pctMap['proyecto'] || 15;
-        const pctExamen = pctMap['examen'] || 15;
+        let pctTareas = 70, pctProyecto = 15, pctExamen = 15;
+        const [configPct1] = await db.query(
+            'SELECT promedio_tareas, proyecto, examen FROM configuracion_porcentajes_materia_curso WHERE materia_id = ? AND curso = ? AND paralelo = ? AND (especialidad = ? OR (especialidad IS NULL AND ? IS NULL))',
+            [materia_id, materia.curso, materia.paralelo, materia.especialidad, materia.especialidad]
+        );
+        if (configPct1.length > 0) {
+            pctTareas = parseFloat(configPct1[0].promedio_tareas) ?? 70;
+            pctProyecto = parseFloat(configPct1[0].proyecto) ?? 15;
+            pctExamen = parseFloat(configPct1[0].examen) ?? 15;
+        } else {
+            const [pcts] = await db.query('SELECT concepto, porcentaje FROM configuracion_porcentajes');
+            const pctMap = {};
+            pcts.forEach(p => { pctMap[p.concepto] = parseFloat(p.porcentaje); });
+            pctTareas = pctMap['promedio_tareas'] ?? 70;
+            pctProyecto = pctMap['proyecto'] ?? 15;
+            pctExamen = pctMap['examen'] ?? 15;
+        }
 
         const trimestreUsado = parseInt(trimestre);
 
@@ -221,12 +243,11 @@ router.get('/asignatura/:grupo_id/trimestre/:trimestre', async (req, res) => {
 
             const tieneNotas = tareas.length > 0 || proyectos.length > 0 || examenes.length > 0;
 
-            if (!tieneNotas) {
-                sinExamen++;
-                estudiantesSinExamen.push(est.nombres_apellidos);
-            } else if (examenes.length === 0) {
-                sinExamen++;
-                estudiantesSinExamen.push(est.nombres_apellidos);
+            if (pctExamen > 0) {
+                if (!tieneNotas || examenes.length === 0) {
+                    sinExamen++;
+                    estudiantesSinExamen.push(est.nombres_apellidos);
+                }
             }
 
             if (tieneNotas) {
@@ -298,12 +319,23 @@ router.get('/final/:grupo_id', async (req, res) => {
         if (materiaInfo.length === 0) return res.status(404).json({ error: 'Materia no encontrada' });
         const materia = materiaInfo[0];
 
-        const [pcts] = await db.query('SELECT concepto, porcentaje FROM configuracion_porcentajes');
-        const pctMap = {};
-        pcts.forEach(p => { pctMap[p.concepto] = parseFloat(p.porcentaje); });
-        const pctTareas = pctMap['promedio_tareas'] || 70;
-        const pctProyecto = pctMap['proyecto'] || 15;
-        const pctExamen = pctMap['examen'] || 15;
+        let pctTareas = 70, pctProyecto = 15, pctExamen = 15;
+        const [configPct2] = await db.query(
+            'SELECT promedio_tareas, proyecto, examen FROM configuracion_porcentajes_materia_curso WHERE materia_id = ? AND curso = ? AND paralelo = ? AND (especialidad = ? OR (especialidad IS NULL AND ? IS NULL))',
+            [materia_id, materia.curso, materia.paralelo, materia.especialidad, materia.especialidad]
+        );
+        if (configPct2.length > 0) {
+            pctTareas = parseFloat(configPct2[0].promedio_tareas) ?? 70;
+            pctProyecto = parseFloat(configPct2[0].proyecto) ?? 15;
+            pctExamen = parseFloat(configPct2[0].examen) ?? 15;
+        } else {
+            const [pcts] = await db.query('SELECT concepto, porcentaje FROM configuracion_porcentajes');
+            const pctMap = {};
+            pcts.forEach(p => { pctMap[p.concepto] = parseFloat(p.porcentaje); });
+            pctTareas = pctMap['promedio_tareas'] ?? 70;
+            pctProyecto = pctMap['proyecto'] ?? 15;
+            pctExamen = pctMap['examen'] ?? 15;
+        }
 
         const [estudiantes] = await db.query(`
             SELECT g.id as grupo_id, e.id as estudiante_id, e.cedula, e.nombres_apellidos, e.sexo, e.discapacidad
