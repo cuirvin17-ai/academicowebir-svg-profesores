@@ -13,10 +13,12 @@ router.get('/list', async (req, res) => {
     try {
         let query = `
             SELECT MIN(g.id) as id, g.nombre_grupo, g.materia_id, m.nombre_materia, m.curso, m.paralelo, m.especialidad, m.docente_id,
+                   u.nombre AS profesor,
                    t.nombre AS tutor_nombre, t.telefono AS tutor_telefono,
                    COUNT(g.estudiante_id) as total_estudiantes
             FROM grupos g
             INNER JOIN materias m ON g.materia_id = m.id
+            LEFT JOIN usuarios u ON m.docente_id = u.id
             LEFT JOIN tutores t ON m.tutor_id = t.id
             WHERE g.school_id = ?
         `;
@@ -25,7 +27,7 @@ router.get('/list', async (req, res) => {
             query += ' AND m.docente_id = ?';
             params.push(user.id);
         }
-        query += ' GROUP BY g.nombre_grupo, g.materia_id, m.nombre_materia, m.curso, m.paralelo, m.especialidad, m.docente_id, t.nombre, t.telefono ORDER BY m.nombre_materia';
+        query += ' GROUP BY g.nombre_grupo, g.materia_id, m.nombre_materia, m.curso, m.paralelo, m.especialidad, m.docente_id, u.nombre, t.nombre, t.telefono ORDER BY m.nombre_materia';
         const [materias] = await db.query(query, params);
         res.json(materias);
     } catch (err) {
