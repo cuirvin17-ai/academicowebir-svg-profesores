@@ -6,7 +6,10 @@
     <title>Iniciar Sesión - Sistema Academico</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * { font-family: 'Inter', sans-serif; }
+
         .bg-animated {
             position: fixed;
             top: 0; left: 0;
@@ -14,60 +17,199 @@
             background: url('/images/fondo-login.jpeg') no-repeat center center;
             background-size: cover;
             animation: zoomPan 20s ease-in-out infinite alternate;
-            z-index: -1;
+            z-index: -2;
         }
         @keyframes zoomPan {
             0% { transform: scale(1) translate(0, 0); }
             100% { transform: scale(1.1) translate(-1%, -1%); }
         }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(2px);
+            z-index: -1;
+        }
+
         body { min-height: 100vh; margin: 0; }
-        .login-card { max-width: 400px; margin: 0 auto; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .login-header { background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; padding: 30px; border-radius: 15px 15px 0 0; text-align: center; }
-        .login-body { padding: 30px; }
-        .btn-login { background: linear-gradient(135deg, #1565c0, #0d47a1); border: none; padding: 12px; font-size: 1.1em; }
-        .btn-login:hover { background: linear-gradient(135deg, #0d47a1, #1a237e); }
-        .form-control:focus { border-color: #1565c0; box-shadow: 0 0 0 0.2rem rgba(21, 101, 192, 0.25); }
-        .input-group-text { background-color: #e3f2fd; border-color: #bbdefb; color: #1565c0; }
+
+        .login-wrapper {
+            max-width: 420px;
+            margin: 0 auto;
+            animation: fadeInUp 0.6s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .login-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .login-header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 35px 30px 25px;
+            text-align: center;
+        }
+        .login-header img {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+        .login-header img:hover { transform: scale(1.05); }
+        .login-header h3 {
+            font-weight: 700;
+            font-size: 1.5em;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .login-header p {
+            font-weight: 300;
+            font-size: 0.9em;
+            opacity: 0.85;
+            margin: 0;
+        }
+
+        .login-body {
+            padding: 30px;
+        }
+
+        .login-body .form-label {
+            font-weight: 500;
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 6px;
+        }
+
+        .input-group {
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .input-group:focus-within {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(33, 150, 243, 0.3);
+        }
+
+        .input-group-text {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-right: none;
+            color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-control {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: none;
+            color: white;
+            font-weight: 400;
+            padding: 10px 15px;
+        }
+        .form-control::placeholder { color: rgba(255, 255, 255, 0.5); }
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border-color: rgba(33, 150, 243, 0.6);
+            box-shadow: none;
+            color: white;
+        }
+
+        .btn-login {
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            border: none;
+            padding: 14px;
+            font-size: 1.05em;
+            font-weight: 600;
+            border-radius: 12px;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        .btn-login:hover::before { left: 100%; }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #1565c0, #0d47a1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(13, 71, 161, 0.4);
+        }
+        .btn-login:active { transform: translateY(0); }
+
+        .footer-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8em;
+            font-weight: 300;
+        }
     </style>
 </head>
 <body class="d-flex align-items-center justify-content-center">
     <div class="bg-animated"></div>
+    <div class="overlay"></div>
     <div class="container">
-        <div class="card login-card">
-            <div class="login-header">
-                <img src="/images/sucua2.png" alt="Logo" style="width:150px; height:150px; border-radius:50%; margin-bottom:15px;">
-                <h3 class="mb-1">Sistema Academico</h3>
-                <p class="mb-0 opacity-75">Gestion de Gestion Academica</p>
-            </div>
-            <div class="login-body">
-                <% if (error) { %>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <% } %>
-                <form method="POST" action="/login">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Cedula / Usuario</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-user"></i></span>
-                            <input type="text" class="form-control" name="cedula" placeholder="Ingrese su cedula" required autofocus>
+        <div class="login-wrapper">
+            <div class="card login-card">
+                <div class="login-header">
+                    <img src="/images/sucua2.png" alt="Logo">
+                    <h3>Sistema Academico</h3>
+                    <p>Gestion de Gestion Academica</p>
+                </div>
+                <div class="login-body">
+                    <% if (error) { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="background: rgba(244,67,54,0.2); border: 1px solid rgba(244,67,54,0.3); color: #ffcdd2; border-radius: 10px;">
+                            <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
                         </div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Contrasena</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                            <input type="password" class="form-control" name="password" placeholder="Ingrese su contrasena" required>
+                    <% } %>
+                    <form method="POST" action="/login">
+                        <div class="mb-3">
+                            <label class="form-label">Cedula / Usuario</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" name="cedula" placeholder="Ingrese su cedula" required autofocus>
+                            </div>
                         </div>
-                    </div>
-                    <button type="submit" class="btn btn-login btn-primary w-100 text-white">
-                        <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesion
-                    </button>
-                </form>
+                        <div class="mb-4">
+                            <label class="form-label">Contrasena</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" name="password" placeholder="Ingrese su contrasena" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-login btn-primary w-100 text-white">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesion
+                        </button>
+                    </form>
+                </div>
             </div>
+            <p class="text-center footer-text mt-3">&copy; 2026 Sistema de Gestion Academica</p>
         </div>
-        <p class="text-center text-white mt-3 opacity-75">&copy; 2026 Sistema de Gestion Academica</p>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
