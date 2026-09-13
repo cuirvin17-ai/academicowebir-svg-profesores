@@ -1197,8 +1197,9 @@ function exportarPDFNotas() {
         span.style.fontSize = '11px';
         input.parentNode.replaceChild(span, input);
     });
-    // Quitar iconos de comentarios
+    // Quitar iconos de comentarios y botones de editar/eliminar tareas
     clone.querySelectorAll('.btn-comentario, .fa-comment').forEach(el => el.remove());
+    clone.querySelectorAll('.btn-group').forEach(el => el.remove());
     // Resetear th y sus divs hijos (quitamos writing-mode y transform)
     clone.querySelectorAll('th').forEach(th => {
         th.style.writingMode = 'horizontal-tb';
