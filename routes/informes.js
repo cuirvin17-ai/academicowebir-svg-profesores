@@ -155,7 +155,7 @@ router.get('/asignatura/:grupo_id/trimestre/:trimestre', async (req, res) => {
         if (grupoInfo.length === 0) return res.status(404).json({ error: 'Grupo no encontrado' });
         const materia_id = grupoInfo[0].materia_id;
 
-        const [materiaInfo] = await db.query('SELECT * FROM materias WHERE id = ?', [materia_id]);
+        const [materiaInfo] = await db.query('SELECT m.*, u.nombre as profesor FROM materias m LEFT JOIN usuarios u ON m.docente_id = u.id WHERE m.id = ?', [materia_id]);
         if (materiaInfo.length === 0) return res.status(404).json({ error: 'Materia no encontrada' });
         const materia = materiaInfo[0];
 
@@ -315,7 +315,7 @@ router.get('/final/:grupo_id', async (req, res) => {
         if (grupoInfo.length === 0) return res.status(404).json({ error: 'Grupo no encontrado' });
         const materia_id = grupoInfo[0].materia_id;
 
-        const [materiaInfo] = await db.query('SELECT * FROM materias WHERE id = ?', [materia_id]);
+        const [materiaInfo] = await db.query('SELECT m.*, u.nombre as profesor FROM materias m LEFT JOIN usuarios u ON m.docente_id = u.id WHERE m.id = ?', [materia_id]);
         if (materiaInfo.length === 0) return res.status(404).json({ error: 'Materia no encontrada' });
         const materia = materiaInfo[0];
 
