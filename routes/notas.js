@@ -315,7 +315,7 @@ router.post('/grupo/:grupo_id/trimestre/:trimestre/multiple', async (req, res) =
 async function calcularPromedio(conn, grupo_id, trimestre) {
     // Obtener materia_id, curso, paralelo, especialidad del grupo
     const [grupoInfo] = await conn.query(
-        'SELECT g.materia_id, g.curso, g.paralelo, g.especialidad, m.nombre_materia FROM grupos g LEFT JOIN materias m ON g.materia_id = m.id WHERE g.id = ? LIMIT 1',
+        'SELECT g.materia_id, m.curso, m.paralelo, m.especialidad, m.nombre_materia FROM grupos g LEFT JOIN materias m ON g.materia_id = m.id WHERE g.id = ? LIMIT 1',
         [grupo_id]
     );
     
