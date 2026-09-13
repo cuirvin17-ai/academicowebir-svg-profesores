@@ -20,7 +20,7 @@ async function cargarGruposInformes() {
         gruposInformes.forEach(g => {
             const option = document.createElement('option');
             option.value = g.id;
-            option.textContent = `${g.nombre_materia} - ${g.curso} (${g.paralelo})`;
+            option.textContent = `${g.nombre_materia} - ${g.curso} (${g.paralelo}) - ${g.especialidad || 'Sin especialidad'}`;
             select.appendChild(option);
         });
     } catch (err) {
