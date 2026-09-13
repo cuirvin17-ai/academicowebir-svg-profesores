@@ -41,6 +41,7 @@ async function generarInforme() {
 
     document.getElementById('contenidoInforme').style.display = 'block';
     document.getElementById('btnExportarPDF').style.display = 'inline-block';
+    document.getElementById('btnExportarExcel').style.display = 'inline-block';
 
     if (tipo === 'acta') {
         document.getElementById('contenedorActa').style.display = 'block';
@@ -324,6 +325,151 @@ function exportarPDFInforme() {
             showNotification('PDF generado', 'success');
         });
     }
+}
+
+function exportarExcelInforme() {
+    const tipo = document.getElementById('tipoInforme').value;
+    const trimestre = document.getElementById('informeTrimestre').value;
+    const grupo = document.getElementById('informeGrupoSelect');
+    const nombreGrupo = grupo.options[grupo.selectedIndex]?.text || '';
+
+    if (tipo === 'acta') {
+        exportarExcelActa(nombreGrupo, trimestre);
+    } else {
+        exportarExcelAsignatura(nombreGrupo, trimestre);
+    }
+}
+
+function exportarExcelActa(nombreGrupo, trimestre) {
+    const tabla = document.getElementById('tablaInforme');
+    if (!tabla) return alert('Primero genere un informe');
+    const data = [];
+    const headers = ['#', 'Cedula', 'Estudiante', 'Prom. Clase', 'Proyecto', 'Examen', 'Nota Final', '% Asistencia'];
+    data.push(headers);
+    const rows = tabla.querySelectorAll('tbody tr');
+    rows.forEach(tr => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length >= 8) {
+            data.push([cells[0].textContent, cells[1].textContent, cells[2].textContent, cells[3].textContent, cells[4].textContent, cells[5].textContent, cells[6].textContent, cells[7].textContent]);
+        }
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Acta');
+    XLSX.writeFile(wb, `Acta_${nombreGrupo}_T${trimestre}.xlsx`);
+}
+
+function exportarExcelAsignatura(nombreGrupo, trimestre) {
+    const data = [];
+    const esFinal = trimestre === '3';
+
+    data.push(['UNIDAD EDUCATIVA "SUCUA"']);
+    data.push(['INFORME TRIMESTRAL DE ASIGNATURA']);
+    data.push([]);
+    data.push(['DOCENTE', 'ASIGNATURA', 'TRIMESTRE', 'AÑO/FIGURA', 'PARALELO', 'N. ALUMNOS']);
+    data.push([
+        document.getElementById('infoDocente').textContent,
+        document.getElementById('infoAsignatura').textContent,
+        document.getElementById('infoTrimestre').textContent,
+        document.getElementById('infoAnoFigura').textContent,
+        document.getElementById('infoParalelo').textContent,
+        document.getElementById('infoNAlumnos').textContent
+    ]);
+    data.push([]);
+    data.push(['RESULTADOS DE LOS APRENDIZAJES']);
+    data.push(['DOMINAN N', 'DOMINAN %', 'ALCANZAN N', 'ALCANZAN %', 'PROXIMOS N', 'PROXIMOS %', 'NO ALCANZAN N', 'NO ALCANZAN %', 'PROMEDIO']);
+    data.push([
+        document.getElementById('resDominanN').textContent,
+        document.getElementById('resDominanP').textContent,
+        document.getElementById('resAlcanzanN').textContent,
+        document.getElementById('resAlcanzanP').textContent,
+        document.getElementById('resProximosN').textContent,
+        document.getElementById('resProximosP').textContent,
+        document.getElementById('resNoAlcanzanN').textContent,
+        document.getElementById('resNoAlcanzanP').textContent,
+        document.getElementById('resPromedio').textContent
+    ]);
+    data.push([]);
+    data.push(['ESTUDIANTES SIN EXAMEN']);
+    data.push(['N.', '%', 'NOMBRE']);
+    data.push([
+        document.getElementById('resSinExamenN').textContent,
+        document.getElementById('resSinExamenP').textContent,
+        document.getElementById('resSinExamenNombres').textContent
+    ]);
+    data.push([]);
+    data.push(['ANALISIS DE DIFICULTADES']);
+    data.push(['ESTUDIANTE', 'DIFICULTAD', 'CAUSA', 'MEDIDAS']);
+    const nomina = document.getElementById('analisisNombres').textContent;
+    if (nomina && nomina !== 'NINGUNO') {
+        const nombres = document.querySelectorAll('#analisisNombres div');
+        const dificultades = document.querySelectorAll('.analisis-dificultad');
+        const causas = document.querySelectorAll('.analisis-causa');
+        const medidas = document.querySelectorAll('.analisis-medidas');
+        for (let i = 0; i < nombres.length; i++) {
+            data.push([
+                nombres[i]?.textContent || '',
+                dificultades[i]?.value || '',
+                causas[i]?.value || '',
+                medidas[i]?.value || ''
+            ]);
+        }
+    } else {
+        data.push(['NINGUNO', '', '', '']);
+    }
+
+    if (esFinal) {
+        data.push([]);
+        data.push(['RESULTADOS ANUALES']);
+        data.push(['DOMINAN N', 'DOMINAN %', 'ALCANZAN N', 'ALCANZAN %', 'PROXIMOS N', 'PROXIMOS %', 'NO ALCANZAN N', 'NO ALCANZAN %', 'PROMEDIO', 'SIN NOTAS N', 'SIN NOTAS %']);
+        data.push([
+            document.getElementById('finalDominanN').textContent,
+            document.getElementById('finalDominanP').textContent,
+            document.getElementById('finalAlcanzanN').textContent,
+            document.getElementById('finalAlcanzanP').textContent,
+            document.getElementById('finalProximosN').textContent,
+            document.getElementById('finalProximosP').textContent,
+            document.getElementById('finalNoAlcanzanN').textContent,
+            document.getElementById('finalNoAlcanzanP').textContent,
+            document.getElementById('finalPromedio').textContent,
+            document.getElementById('finalSinNotasN').textContent,
+            document.getElementById('finalSinNotasP').textContent
+        ]);
+        data.push([]);
+        data.push(['PROMOCION']);
+        data.push(['PROMOVIDOS N', 'PROMOVIDOS %', 'SUPLETORIOS N', 'SUPLETORIOS %', 'PERDIDAS N', 'PERDIDAS %']);
+        data.push([
+            document.getElementById('promoPromovidosN').textContent,
+            document.getElementById('promoPromovidosP').textContent,
+            document.getElementById('promoSupletorioN').textContent,
+            document.getElementById('promoSupletorioP').textContent,
+            document.getElementById('promoPierdenN').textContent,
+            document.getElementById('promoPierdenP').textContent
+        ]);
+        data.push([]);
+        data.push(['N.', 'ESTUDIANTE', 'SUPLETORIO', 'PERDIDA']);
+        const promoRows = document.querySelectorAll('#promoCuerpo tr');
+        promoRows.forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            if (cells.length >= 4) {
+                data.push([cells[0].textContent, cells[1].textContent, cells[2].textContent, cells[3].textContent]);
+            }
+        });
+    }
+
+    data.push([]);
+    data.push(['CONCLUSIONES']);
+    data.push([document.getElementById('conclusiones').value || '']);
+    data.push([]);
+    data.push(['RECOMENDACIONES']);
+    data.push([document.getElementById('recomendaciones').value || '']);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Informe');
+    const tipoInforme = trimestre === '3' ? 'Final' : 'Asignatura';
+    XLSX.writeFile(wb, `Informe_${tipoInforme}_${nombreGrupo}_T${trimestre}.xlsx`);
 }
 
 document.addEventListener('DOMContentLoaded', cargarGruposInformes);
