@@ -67,15 +67,23 @@
             color: white;
             padding: 35px 30px 25px;
             text-align: center;
+            transition: background 0.3s ease;
+        }
+        .login-header:hover {
+            background: rgba(13, 71, 161, 0.8);
         }
         .login-header img {
             width: 120px; height: 120px;
             border-radius: 50%;
             border: 3px solid rgba(255, 255, 255, 0.3);
             margin-bottom: 15px;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
         }
-        .login-header img:hover { transform: scale(1.05); }
+        .login-header img:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 0 30px rgba(33, 150, 243, 0.6);
+            border-color: rgba(33, 150, 243, 0.8);
+        }
         .login-header h3 {
             font-weight: 700;
             font-size: 1.5em;
@@ -98,6 +106,12 @@
             font-size: 0.85em;
             color: rgba(255, 255, 255, 0.9);
             margin-bottom: 6px;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        .input-group:hover ~ .form-label,
+        .input-group:hover + .form-label {
+            color: #42a5f5;
+            text-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
         }
 
         .input-group {
@@ -105,9 +119,20 @@
             overflow: hidden;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+        .input-group:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 25px rgba(33, 150, 243, 0.35);
+        }
         .input-group:focus-within {
             transform: scale(1.02);
             box-shadow: 0 0 20px rgba(33, 150, 243, 0.3);
+        }
+        .input-group:hover .input-group-text {
+            background: rgba(33, 150, 243, 0.2) !important;
+            color: #42a5f5;
+        }
+        .input-group:hover .form-control {
+            background: rgba(255, 255, 255, 0.15) !important;
         }
 
         .input-group-text {
@@ -166,6 +191,10 @@
             color: rgba(255, 255, 255, 0.6);
             font-size: 0.8em;
             font-weight: 300;
+            transition: color 0.3s ease;
+        }
+        .footer-text:hover {
+            color: rgba(255, 255, 255, 0.9);
         }
     </style>
 </head>
