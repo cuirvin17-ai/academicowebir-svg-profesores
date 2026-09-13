@@ -6,170 +6,338 @@
     <title>Menu Principal - Sistema de Gestion Academica</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="/js/main.js" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+
+        .bg-menu {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: url('/images/fondo-login.jpeg') no-repeat center center;
+            background-size: cover;
+            animation: zoomPan 20s ease-in-out infinite alternate;
+            z-index: -2;
+        }
+        @keyframes zoomPan {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.1) translate(-1%, -1%); }
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
+            z-index: -1;
+        }
+
+        body { min-height: 100vh; }
+
+        .main-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            animation: fadeInUp 0.6s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .main-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .card-header-custom {
+            background: rgba(13, 71, 161, 0.7);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        .card-header-custom img {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 10px;
+        }
+        .card-header-custom h1 {
+            font-size: 1.5em;
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 10px;
+        }
+        .card-header-custom .user-info {
+            font-weight: 300;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .period-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin-top: 8px;
+        }
+        .period-selector label {
+            font-size: 0.85em;
+            font-weight: 400;
+            margin: 0;
+        }
+        .period-selector select {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 0.85em;
+        }
+        .period-selector select option { color: #333; background: white; }
+
+        .menu-grid {
+            padding: 25px;
+        }
+
+        .menu-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 10px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-height: 110px;
+        }
+        .menu-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s ease;
+        }
+        .menu-btn:hover::before { left: 100%; }
+        .menu-btn:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+        }
+        .menu-btn:active { transform: translateY(-2px); }
+
+        .menu-btn i {
+            font-size: 2em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        .menu-btn span {
+            font-weight: 500;
+            font-size: 0.85em;
+            text-align: center;
+        }
+
+        .menu-btn.btn-diagnostico { border-left: 3px solid #fff; }
+        .menu-btn.btn-notas { border-left: 3px solid #42a5f5; }
+        .menu-btn.btn-asistencia { border-left: 3px solid #66bb6a; }
+        .menu-btn.btn-alertas { border-left: 3px solid #ffa726; }
+        .menu-btn.btn-recuperacion { border-left: 3px solid #ab47bc; }
+        .menu-btn.btn-reportes { border-left: 3px solid #42a5f5; }
+        .menu-btn.btn-informes { border-left: 3px solid #66bb6a; }
+        .menu-btn.btn-recursos { border-left: 3px solid #26c6da; }
+        .menu-btn.btn-salir { border-left: 3px solid #ef5350; background: rgba(239, 83, 80, 0.15); }
+        .menu-btn.btn-salir:hover { background: rgba(239, 83, 80, 0.3); }
+
+        .footer-text {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.75em;
+            font-weight: 300;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .menu-btn { padding: 15px 8px; min-height: 90px; }
+            .menu-btn i { font-size: 1.5em; }
+            .menu-btn span { font-size: 0.75em; }
+            .card-header-custom h1 { font-size: 1.2em; }
+        }
+    </style>
 </head>
-<body>
-    <div class="bg-menu d-flex align-items-center justify-content-center" style="min-height: 100vh;">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6">
-                    <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-                        <div class="card-header bg-primary text-white text-center py-4">
-                            <h1 class="h2 mb-0">
-                                <img src="/images/sucua2.png" alt="Logo" style="width:50px; height:50px; border-radius:50%; margin-right:8px;">
-                                Sistema de Gestion Academica
-                            </h1>
-                            <div class="mt-2">
-                                <label class="text-white-50 me-2">Periodo:</label>
-                                <select id="selectorAnio" class="form-select form-select-sm d-inline-block w-auto" onchange="cambiarAnio(this.value)">
-                                </select>
-                            </div>
-                            <p class="mb-0 mt-1">
-                                <small>
-                                    <% const rolLabels = {docente:'Docente',secretaria:'Secretaria',rector:'Rector',inspector:'Inspector'}; %>
-                                    <i class="fas fa-user me-1"></i><%= user.nombre %> - <%= rolLabels[user.rol] || user.rol %>
-                                </small>
-                            </p>
+<body class="d-flex align-items-center justify-content-center">
+    <div class="bg-menu"></div>
+    <div class="overlay"></div>
+    <div class="container py-4">
+        <div class="main-wrapper">
+            <div class="main-card">
+                <div class="card-header-custom">
+                    <img src="/images/sucua2.png" alt="Logo">
+                    <h1>Sistema de Gestion Academica</h1>
+                    <div class="period-selector">
+                        <label>Periodo:</label>
+                        <select id="selectorAnio" onchange="cambiarAnio(this.value)"></select>
+                    </div>
+                    <p class="user-info mt-2 mb-0">
+                        <i class="fas fa-user me-1"></i>
+                        <% const rolLabels = {docente:'Docente',secretaria:'Secretaria',rector:'Rector',inspector:'Inspector'}; %>
+                        <%= user.nombre %> - <%= rolLabels[user.rol] || user.rol %>
+                    </p>
+                </div>
+                <div class="menu-grid">
+                    <div class="row g-3">
+
+                        <% if (user.rol === 'docente') { %>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/diagnostico/view" class="menu-btn btn-diagnostico">
+                                <i class="fas fa-clipboard-list"></i>
+                                <span>Prueba Diagnostico</span>
+                            </a>
                         </div>
-                        <div class="card-body p-4">
-                            <div class="row g-3">
-
-                                <% if (user.rol === 'docente') { %>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/diagnostico/view" class="menu-item btn btn-outline-dark w-100 h-100 py-3">
-                                        <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Prueba Diagnostico</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/notas/view" class="menu-item btn btn-outline-primary w-100 h-100 py-3">
-                                        <i class="fas fa-chart-bar fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Notas Trimestrales</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/asistencias/view" class="menu-item btn btn-outline-primary w-100 h-100 py-3">
-                                        <i class="fas fa-clipboard-check fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Asistencia</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/alertas/view" class="menu-item btn btn-outline-warning w-100 h-100 py-3">
-                                        <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Alertas</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/recuperacion/view" class="menu-item btn btn-outline-secondary w-100 h-100 py-3">
-                                        <i class="fas fa-hands-helping fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Recuperacion Pedagogica</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/reportes/view" class="menu-item btn btn-outline-primary w-100 h-100 py-3">
-                                        <i class="fas fa-file-alt fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Reportes</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/informes/view" class="menu-item btn btn-outline-success w-100 h-100 py-3">
-                                        <i class="fas fa-file-contract fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Informes</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/recursos/view" class="menu-item btn btn-outline-info w-100 h-100 py-3">
-                                        <i class="fas fa-book-open fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Recursos</span>
-                                    </a>
-                                </div>
-                                <% } %>
-
-                                <% if (user.rol === 'rector') { %>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/rector/view" class="menu-item btn btn-outline-danger w-100 h-100 py-3">
-                                        <i class="fas fa-school fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Gestion Academica</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/admin/view" class="menu-item btn btn-outline-dark w-100 h-100 py-3">
-                                        <i class="fas fa-users-cog fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Admin Usuarios</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/anio-lectivos/view" class="menu-item btn btn-outline-primary w-100 h-100 py-3">
-                                        <i class="fas fa-calendar-alt fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Años Lectivos</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/informes/view" class="menu-item btn btn-outline-success w-100 h-100 py-3">
-                                        <i class="fas fa-file-contract fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Informes</span>
-                                    </a>
-                                </div>
-                                <% } %>
-
-                                <% if (user.rol === 'inspector') { %>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/inspector/estudiantes/view" class="menu-item btn btn-outline-primary w-100 h-100 py-3">
-                                        <i class="fas fa-user-graduate fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Estudiantes</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/asistencias/view" class="menu-item btn btn-outline-primary w-100 h-100 py-3">
-                                        <i class="fas fa-clipboard-check fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Asistencia</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/reportes/view" class="menu-item btn btn-outline-success w-100 h-100 py-3">
-                                        <i class="fas fa-file-alt fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Reportes</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/alertas/view" class="menu-item btn btn-outline-warning w-100 h-100 py-3">
-                                        <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Alertas</span>
-                                    </a>
-                                </div>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/justificaciones/view" class="menu-item btn btn-outline-info w-100 h-100 py-3">
-                                        <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Justificaciones</span>
-                                    </a>
-                                </div>
-                                <% } %>
-
-                                <% if (user.rol === 'secretaria') { %>
-                                <div class="col-6 col-md-4">
-                                    <a href="/api/secretaria/view" class="menu-item btn btn-outline-info w-100 h-100 py-3">
-                                        <i class="fas fa-user-graduate fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Ingreso de Estudiantes</span>
-                                    </a>
-                                </div>
-                                <% } %>
-
-                                <div class="col-6 col-md-4">
-                                    <button onclick="window.location.href='/logout'" class="menu-item btn btn-outline-danger w-100 h-100 py-3">
-                                        <i class="fas fa-sign-out-alt fa-2x mb-2 d-block"></i>
-                                        <span class="d-block">Salir</span>
-                                    </button>
-                                </div>
-
-                            </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/notas/view" class="menu-btn btn-notas">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Notas Trimestrales</span>
+                            </a>
                         </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/asistencias/view" class="menu-btn btn-asistencia">
+                                <i class="fas fa-clipboard-check"></i>
+                                <span>Asistencia</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/alertas/view" class="menu-btn btn-alertas">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Alertas</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/recuperacion/view" class="menu-btn btn-recuperacion">
+                                <i class="fas fa-hands-helping"></i>
+                                <span>Recuperacion Pedagogica</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/reportes/view" class="menu-btn btn-reportes">
+                                <i class="fas fa-file-alt"></i>
+                                <span>Reportes</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/informes/view" class="menu-btn btn-informes">
+                                <i class="fas fa-file-contract"></i>
+                                <span>Informes</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/recursos/view" class="menu-btn btn-recursos">
+                                <i class="fas fa-book-open"></i>
+                                <span>Recursos</span>
+                            </a>
+                        </div>
+                        <% } %>
+
+                        <% if (user.rol === 'rector') { %>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/rector/view" class="menu-btn btn-notas">
+                                <i class="fas fa-school"></i>
+                                <span>Gestion Academica</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/admin/view" class="menu-btn btn-diagnostico">
+                                <i class="fas fa-users-cog"></i>
+                                <span>Admin Usuarios</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/anio-lectivos/view" class="menu-btn btn-asistencia">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Anos Lectivos</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/informes/view" class="menu-btn btn-informes">
+                                <i class="fas fa-file-contract"></i>
+                                <span>Informes</span>
+                            </a>
+                        </div>
+                        <% } %>
+
+                        <% if (user.rol === 'inspector') { %>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/inspector/estudiantes/view" class="menu-btn btn-notas">
+                                <i class="fas fa-user-graduate"></i>
+                                <span>Estudiantes</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/asistencias/view" class="menu-btn btn-asistencia">
+                                <i class="fas fa-clipboard-check"></i>
+                                <span>Asistencia</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/reportes/view" class="menu-btn btn-informes">
+                                <i class="fas fa-file-alt"></i>
+                                <span>Reportes</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/alertas/view" class="menu-btn btn-alertas">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Alertas</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/justificaciones/view" class="menu-btn btn-recursos">
+                                <i class="fas fa-clipboard-list"></i>
+                                <span>Justificaciones</span>
+                            </a>
+                        </div>
+                        <% } %>
+
+                        <% if (user.rol === 'secretaria') { %>
+                        <div class="col-6 col-md-4">
+                            <a href="/api/secretaria/view" class="menu-btn btn-recursos">
+                                <i class="fas fa-user-graduate"></i>
+                                <span>Ingreso de Estudiantes</span>
+                            </a>
+                        </div>
+                        <% } %>
+
+                        <div class="col-6 col-md-4">
+                            <button onclick="window.location.href='/logout'" class="menu-btn btn-salir w-100">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Salir</span>
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>
+            <p class="footer-text mt-3">&copy; 2026 Sistema de Gestion Academica</p>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const anioActual = '<%= user.anio_lectivo || "2026-2027" %>';
 
@@ -195,10 +363,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ anio_lectivo: year })
                 });
-                const result = await res.json();
-                if (res.ok) {
-                    window.location.reload();
-                }
+                if (res.ok) window.location.reload();
             } catch (err) {
                 alert('Error al cambiar año lectivo');
             }
