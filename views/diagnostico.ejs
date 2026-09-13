@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="/js/main.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         .nota-input { width: 70px; text-align: center; }
         .total-cell { font-weight: bold; font-size: 1.1em; }
@@ -72,6 +73,9 @@
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="exportarPDFDiagnostico()">
                                 <i class="fas fa-file-pdf"></i> PDF
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="exportarExcelDiagnostico()">
+                                <i class="fas fa-file-excel"></i> Excel
                             </button>
                         </div>
                     </div>
@@ -472,6 +476,53 @@
             if (numDestrezas <= 1) return alert('Debe haber al menos una destreza');
             numDestrezas--;
             renderTablaDiag();
+        }
+
+        function exportarExcelDiagnostico() {
+            const tabla = document.getElementById('tablaDiag');
+            if (!tabla || tabla.rows.length <= 1) return alert('No hay datos para exportar');
+            const grupo = document.getElementById('nombreGrupoDiag').textContent;
+            const materia = document.getElementById('materia_diag').value;
+            const modoLabel = getModoCalculo() === 'suma' ? 'Suma' : 'Promedio';
+            const docente = typeof nombreDocente !== 'undefined' ? nombreDocente : '';
+
+            const data = [];
+            const headers = ['Estudiante'];
+            for (let i = 1; i <= numDestrezas; i++) {
+                headers.push(nombresDestrezas[i] || 'D' + i);
+            }
+            headers.push(modoLabel, 'Descripcion');
+            data.push(headers);
+
+            const inputs = tabla.querySelectorAll('tr[data-estudiante]');
+            inputs.forEach(tr => {
+                const estId = tr.dataset.estudiante;
+                const row = [tr.cells[0].textContent];
+                for (let i = 0; i < numDestrezas; i++) {
+                    const inp = tr.querySelector(`input[data-idx="${i}"]`);
+                    row.push(inp && inp.value !== '' ? parseFloat(inp.value) : '');
+                }
+                const totalEl = tr.querySelector(`.total-${estId}`);
+                const descEl = tr.querySelector(`.desc-${estId}`);
+                row.push(totalEl && totalEl.textContent !== '-' ? totalEl.textContent : '');
+                row.push(descEl ? descEl.textContent : '');
+                data.push(row);
+            });
+
+            const promRow = tabla.querySelector('tr.table-secondary');
+            if (promRow) {
+                const row = ['PROMEDIOS'];
+                const cells = promRow.querySelectorAll('td');
+                for (let i = 1; i < cells.length; i++) {
+                    row.push(cells[i].textContent);
+                }
+                data.push(row);
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Diagnostico');
+            XLSX.writeFile(wb, `Diagnostico_${materia}_${grupo}.xlsx`);
         }
 
         function exportarPDFDiagnostico() {
