@@ -7,7 +7,12 @@ function exportarPDFAlertas(tablaId, titulo) {
     if (!tabla) return;
     const select = document.getElementById('alertaGrupoSelect');
     const idx = select.selectedIndex;
-    const profesor = idx > 0 ? (gruposAlertas[idx - 1]?.profesor || '') : '';
+    const grupo = idx > 0 ? gruposAlertas[idx - 1] : null;
+    const profesor = grupo?.profesor || '';
+    const curso = grupo?.curso || '';
+    const paralelo = grupo?.paralelo || '';
+    const especialidad = grupo?.especialidad || '';
+    const materia = grupo?.nombre_materia || '';
     const config = {
         margin: [10, 5, 10, 5],
         filename: tablaId + '.pdf',
@@ -16,8 +21,10 @@ function exportarPDFAlertas(tablaId, titulo) {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
     const div = document.createElement('div');
-    const tituloCompleto = titulo + (profesor ? ' - Docente: ' + profesor : '');
-    div.innerHTML = '<h4 style="text-align:center; margin-bottom:10px;">' + tituloCompleto + '</h4>' + tabla.outerHTML;
+    let subtitulo = `${materia} - ${curso} (${paralelo})`;
+    if (especialidad) subtitulo += ` - ${especialidad}`;
+    if (profesor) subtitulo += ` | Docente: ${profesor}`;
+    div.innerHTML = `<h4 style="text-align:center; margin-bottom:5px;">${titulo}</h4><p style="text-align:center; margin-bottom:10px;"><strong>${subtitulo}</strong></p>` + tabla.outerHTML;
     html2pdf().set(config).from(div).save();
 }
 
