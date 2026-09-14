@@ -339,4 +339,74 @@ router.post('/importar-excel', upload.single('archivo'), async (req, res) => {
     }
 });
 
+// ========== BUSQUEDA DE ESTUDIANTES ==========
+
+router.get('/busqueda/view', (req, res) => {
+    res.render('busqueda_secretaria', { user: req.session.user });
+});
+
+router.get('/busqueda/ciudades', async (req, res) => {
+    try {
+        const db = req.db;
+        const schoolId = req.session.user.school_id;
+        const anio = req.session.user.anio_lectivo || '2026-2027';
+        const [rows] = await db.query(
+            "SELECT DISTINCT ciudad FROM estudiantes WHERE school_id = ? AND anio_lectivo = ? AND ciudad IS NOT NULL AND ciudad != '' ORDER BY ciudad",
+            [schoolId, anio]
+        );
+        res.json(rows.map(r => r.ciudad));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get('/busqueda/buscar', async (req, res) => {
+    try {
+        const db = req.db;
+        const schoolId = req.session.user.school_id;
+        const anio = req.session.user.anio_lectivo || '2026-2027';
+        const { sexo, edad_min, edad_max, anio_nac_min, anio_nac_max, ciudad, discapacidad } = req.query;
+
+        let sql = 'SELECT * FROM estudiantes WHERE school_id = ? AND anio_lectivo = ?';
+        const params = [schoolId, anio];
+
+        if (sexo) {
+            sql += ' AND sexo = ?';
+            params.push(sexo);
+        }
+        if (edad_min) {
+            sql += ' AND edad >= ?';
+            params.push(parseInt(edad_min));
+        }
+        if (edad_max) {
+            sql += ' AND edad <= ?';
+            params.push(parseInt(edad_max));
+        }
+        if (anio_nac_min) {
+            sql += ' AND YEAR(fecha_nacimiento) >= ?';
+            params.push(parseInt(anio_nac_min));
+        }
+        if (anio_nac_max) {
+            sql += ' AND YEAR(fecha_nacimiento) <= ?';
+            params.push(parseInt(anio_nac_max));
+        }
+        if (ciudad) {
+            sql += ' AND ciudad = ?';
+            params.push(ciudad);
+        }
+        if (discapacidad === 'SI') {
+            sql += ' AND discapacidad != "NO"';
+        } else if (discapacidad === 'NO') {
+            sql += ' AND (discapacidad = "NO" OR discapacidad IS NULL)';
+        }
+
+        sql += ' ORDER BY nombres_apellidos';
+        const [rows] = await db.query(sql, params);
+        res.json(rows);
+    } catch (err) {
+        console.error('Error en busqueda:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
