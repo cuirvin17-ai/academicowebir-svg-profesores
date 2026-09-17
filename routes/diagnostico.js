@@ -50,7 +50,7 @@ router.get('/curso/:curso/paralelo/:paralelo/materia/:materia_id/diagnosticos', 
     const { curso, paralelo, materia_id } = req.params;
     try {
         const [rows] = await db.query(`
-            SELECT pd.id, pd.estudiante_id, pd.destrezas, pd.total, pd.descripcion, pd.fecha,
+            SELECT pd.id, pd.estudiante_id, pd.destrezas, pd.total, pd.descripcion, pd.fecha, pd.nombres_destrezas,
                    e.cedula, e.nombres_apellidos
             FROM pruebas_diagnostico pd
             INNER JOIN estudiantes e ON pd.estudiante_id = e.id
@@ -65,7 +65,7 @@ router.get('/curso/:curso/paralelo/:paralelo/materia/:materia_id/diagnosticos', 
 
 router.post('/guardar', async (req, res) => {
     const db = req.db;
-    const { diagnosticos } = req.body;
+    const { diagnosticos, nombres_destrezas } = req.body;
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
@@ -88,15 +88,17 @@ router.post('/guardar', async (req, res) => {
                 [diag.estudiante_id, diag.materia_id, diag.curso, diag.paralelo]
             );
 
+            const nombresJson = nombres_destrezas ? JSON.stringify(nombres_destrezas) : null;
+
             if (existing.length > 0) {
                 await conn.query(
-                    'UPDATE pruebas_diagnostico SET destrezas = ?, total = ?, descripcion = ?, fecha = CURDATE() WHERE id = ?',
-                    [JSON.stringify(diag.destrezas), total, descripcion, existing[0].id]
+                    'UPDATE pruebas_diagnostico SET destrezas = ?, total = ?, descripcion = ?, fecha = CURDATE(), nombres_destrezas = COALESCE(?, nombres_destrezas) WHERE id = ?',
+                    [JSON.stringify(diag.destrezas), total, descripcion, nombresJson, existing[0].id]
                 );
             } else {
                 await conn.query(
-                    'INSERT INTO pruebas_diagnostico (estudiante_id, materia_id, curso, paralelo, destrezas, total, descripcion) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [diag.estudiante_id, diag.materia_id, diag.curso, diag.paralelo, JSON.stringify(diag.destrezas), total, descripcion]
+                    'INSERT INTO pruebas_diagnostico (estudiante_id, materia_id, curso, paralelo, destrezas, total, descripcion, nombres_destrezas) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [diag.estudiante_id, diag.materia_id, diag.curso, diag.paralelo, JSON.stringify(diag.destrezas), total, descripcion, nombresJson]
                 );
             }
         }
@@ -116,6 +118,20 @@ router.delete('/:id', async (req, res) => {
     try {
         await db.query('DELETE FROM pruebas_diagnostico WHERE id = ?', [req.params.id]);
         res.json({ message: 'Diagnostico eliminado' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/guardar-nombres', async (req, res) => {
+    const db = req.db;
+    const { materia_id, curso, paralelo, nombres_destrezas } = req.body;
+    try {
+        await db.query(
+            'UPDATE pruebas_diagnostico SET nombres_destrezas = ? WHERE materia_id = ? AND curso = ? AND paralelo = ?',
+            [JSON.stringify(nombres_destrezas), materia_id, curso, paralelo]
+        );
+        res.json({ message: 'Nombres guardados' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

@@ -182,7 +182,26 @@
             if (nombre !== null && nombre.trim() !== '') {
                 nombresDestrezas[num] = nombre.trim();
                 guardarNombresDestrezas();
+                guardarNombresEnServidor();
                 renderTablaDiag();
+            }
+        }
+
+        async function guardarNombresEnServidor() {
+            if (!currentMateriaInfo) return;
+            try {
+                await fetch('/api/diagnostico/guardar-nombres', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        materia_id: currentMateriaInfo.materia_id,
+                        curso: currentMateriaInfo.curso,
+                        paralelo: currentMateriaInfo.paralelo,
+                        nombres_destrezas: nombresDestrezas
+                    })
+                });
+            } catch (err) {
+                console.error('Error guardando nombres:', err);
             }
         }
 
@@ -301,6 +320,19 @@
                     ? JSON.parse(diagnosticosExistentes[0].destrezas)
                     : diagnosticosExistentes[0].destrezas;
                 numDestrezas = primerDiag.length;
+            }
+
+            // Cargar nombres de destrezas desde la BD
+            if (diagnosticosExistentes.length > 0 && diagnosticosExistentes[0].nombres_destrezas) {
+                const nombresBD = typeof diagnosticosExistentes[0].nombres_destrezas === 'string'
+                    ? JSON.parse(diagnosticosExistentes[0].nombres_destrezas)
+                    : diagnosticosExistentes[0].nombres_destrezas;
+                nombresDestrezas = nombresBD;
+                // También guardar en localStorage como respaldo
+                guardarNombresDestrezas();
+            } else {
+                // Si no hay en BD, intentar cargar de localStorage
+                cargarNombresDestrezas();
             }
 
             renderTablaDiag();
@@ -627,7 +659,7 @@
                 const res = await fetch('/api/diagnostico/guardar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ diagnosticos })
+                    body: JSON.stringify({ diagnosticos, nombres_destrezas: nombresDestrezas })
                 });
                 const data = await res.json();
                 if (res.ok) {

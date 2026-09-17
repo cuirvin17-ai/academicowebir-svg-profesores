@@ -190,6 +190,20 @@ app.use('/api/recuperacion', requireAuth, injectDB, recuperacionRoutes);
 app.use('/api/justificaciones', requireAuth, injectDB, justificacionesRoutes);
 app.use('/api/diagnostico', requireAuth, injectDB, diagnosticoRoutes);
 
+// Migración: agregar columna nombres_destrezas si no existe
+(async () => {
+    try {
+        const db = getPool();
+        const [cols] = await db.query("SHOW COLUMNS FROM pruebas_diagnostico LIKE 'nombres_destrezas'");
+        if (cols.length === 0) {
+            await db.query("ALTER TABLE pruebas_diagnostico ADD COLUMN nombres_destrezas JSON DEFAULT NULL");
+            console.log('Migración: columna nombres_destrezas agregada');
+        }
+    } catch (err) {
+        console.log('Migración nombres_destrezas:', err.message);
+    }
+})();
+
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
