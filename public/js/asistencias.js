@@ -62,20 +62,19 @@ async function cargarGrupos() {
 function generarFechasSemana(fechaInicio) {
     const fecha = parseFechaLocal(fechaInicio);
 
-    // Si cae en fin de semana, saltar al siguiente lunes
-    if (fecha.getDay() === 6) fecha.setDate(fecha.getDate() + 2);
-    if (fecha.getDay() === 0) fecha.setDate(fecha.getDate() + 1);
+    // Retroceder al lunes de la semana que contiene la fecha
+    const dow = fecha.getDay();
+    const diasAtras = dow === 0 ? 6 : dow - 1;
+    fecha.setDate(fecha.getDate() - diasAtras);
 
     currentFechasSemana = [];
-    while (currentFechasSemana.length < 5) {
-        const dow = fecha.getDay();
-        if (dow >= 1 && dow <= 5) {
-            currentFechasSemana.push({
-                fecha: formatFechaLocal(fecha),
-                dia: NOMBRES_DIAS[dow]
-            });
-        }
-        fecha.setDate(fecha.getDate() + 1);
+    for (let i = 0; i < 5; i++) {
+        const d = new Date(fecha);
+        d.setDate(fecha.getDate() + i);
+        currentFechasSemana.push({
+            fecha: formatFechaLocal(d),
+            dia: NOMBRES_DIAS[d.getDay()]
+        });
     }
 
     document.getElementById('fechaSemanaMostrar').textContent =
