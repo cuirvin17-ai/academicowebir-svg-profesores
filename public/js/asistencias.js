@@ -3,6 +3,20 @@ let estudiantesGrupo = [];
 let currentGrupoId = null;
 let currentFechasSemana = [];
 
+const NOMBRES_DIAS = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+
+function parseFechaLocal(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function formatFechaLocal(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     cargarGrupos();
 
@@ -10,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     flatpickr('#fecha_semana', {
         enableTime: false,
         dateFormat: 'Y-m-d',
-        defaultDate: new Date().toISOString().split('T')[0],
+        defaultDate: formatFechaLocal(new Date()),
         onChange: async function(selectedDates, dateStr) {
             if (dateStr && currentGrupoId) {
                 generarFechasSemana(dateStr);
@@ -23,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
     flatpickr('#fecha_historial', {
         enableTime: false,
         dateFormat: 'Y-m-d',
-        defaultDate: new Date().toISOString().split('T')[0]
+        defaultDate: formatFechaLocal(new Date())
     });
 });
 
@@ -46,27 +60,26 @@ async function cargarGrupos() {
 }
 
 function generarFechasSemana(fechaInicio) {
-    const inicio = new Date(fechaInicio);
-    const diaSemana = inicio.getDay();
-    const diff = inicio.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
-    const lunes = new Date(inicio.setDate(diff));
+    const fecha = parseFechaLocal(fechaInicio);
+
+    // Si cae en fin de semana, saltar al siguiente lunes
+    if (fecha.getDay() === 6) fecha.setDate(fecha.getDate() + 2);
+    if (fecha.getDay() === 0) fecha.setDate(fecha.getDate() + 1);
 
     currentFechasSemana = [];
-    const diasSemana = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie'];
-
-    for (let i = 0; i < 5; i++) {
-        const fecha = new Date(lunes);
-        fecha.setDate(lunes.getDate() + i);
-        const fechaStr = fecha.toISOString().split('T')[0];
-        currentFechasSemana.push({
-            fecha: fechaStr,
-            dia: diasSemana[i]
-        });
+    while (currentFechasSemana.length < 5) {
+        const dow = fecha.getDay();
+        if (dow >= 1 && dow <= 5) {
+            currentFechasSemana.push({
+                fecha: formatFechaLocal(fecha),
+                dia: NOMBRES_DIAS[dow]
+            });
+        }
+        fecha.setDate(fecha.getDate() + 1);
     }
 
-    const inicioStr = currentFechasSemana[0].fecha;
-    const finStr = currentFechasSemana[4].fecha;
-    document.getElementById('fechaSemanaMostrar').textContent = `${inicioStr} al ${finStr}`;
+    document.getElementById('fechaSemanaMostrar').textContent =
+        `${currentFechasSemana[0].fecha} al ${currentFechasSemana[4].fecha}`;
 }
 
 async function cargarEstudiantesAsistencia() {
@@ -88,7 +101,7 @@ async function cargarEstudiantesAsistencia() {
         // Set default week date if not set
         const fechaInput = document.getElementById('fecha_semana');
         if (!fechaInput.value) {
-            const today = new Date().toISOString().split('T')[0];
+            const today = formatFechaLocal(new Date());
             fechaInput.value = today;
             generarFechasSemana(today);
         } else {
@@ -198,8 +211,8 @@ async function guardarAsistenciaSemana() {
     // Validate week range
     const inicioSemana = currentFechasSemana[0].fecha;
     const finSemana = currentFechasSemana[4].fecha;
-    const inicioPeriodo = new Date('2026-08-01');
-    const finPeriodo = new Date('2027-07-31');
+    const inicioPeriodo = parseFechaLocal('2026-08-01');
+    const finPeriodo = parseFechaLocal('2027-07-31');
 
     if (new Date(inicioSemana) < inicioPeriodo || new Date(finSemana) > finPeriodo) {
         showNotification('La semana debe estar entre agosto 2026 y julio 2027', 'warning');
@@ -317,8 +330,9 @@ async function buscarPorEstudiante() {
             document.getElementById('sinResultado').style.display = 'none';
 
             historial.forEach(a => {
-                const fecha = new Date(a.fecha).toLocaleDateString('es-ES');
-                const diaSemana = new Date(a.fecha).toLocaleDateString('es-ES', { weekday: 'short' });
+                const fechaObj = parseFechaLocal(String(a.fecha).split('T')[0]);
+                const fecha = fechaObj.toLocaleDateString('es-ES');
+                const diaSemana = NOMBRES_DIAS[fechaObj.getDay()];
                 let estadoBadge, estadoTexto;
                 if (a.justificacion_id) {
                     estadoBadge = 'bg-info';
