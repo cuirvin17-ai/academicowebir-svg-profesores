@@ -91,24 +91,27 @@
                                 <div class="row g-2 mb-3">
                                     <div class="col-md-3">
                                         <label class="form-label fw-bold mb-1">Desde</label>
-                                        <input type="date" class="form-control form-control-sm" id="faltaDesde" onchange="cargarFaltasTutor()">
+                                        <input type="date" class="form-control form-control-sm" id="faltaDesde">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label fw-bold mb-1">Hasta</label>
-                                        <input type="date" class="form-control form-control-sm" id="faltaHasta" onchange="cargarFaltasTutor()">
+                                        <input type="date" class="form-control form-control-sm" id="faltaHasta">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label fw-bold mb-1">Tipo</label>
-                                        <select class="form-select form-select-sm" id="faltaEstado" onchange="cargarFaltasTutor()">
+                                        <select class="form-select form-select-sm" id="faltaEstado">
                                             <option value="">Faltas y atrasos</option>
                                             <option value="ausente">Solo faltas</option>
                                             <option value="atraso">Solo atrasos</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3 d-flex align-items-end">
-                                        <div id="resumenFaltas" class="form-text fw-bold"></div>
+                                    <div class="col-md-3 d-flex align-items-end gap-2">
+                                        <button class="btn btn-primary btn-sm" onclick="cargarFaltasTutor()">
+                                            <i class="fas fa-search me-1"></i>Generar / Consultar
+                                        </button>
                                     </div>
                                 </div>
+                                <div id="resumenFaltas" class="form-text fw-bold mb-2"></div>
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-sm table-hover">
                                         <thead class="table-dark text-center">
@@ -401,10 +404,9 @@
 
         function cambiarCursoTutor() {
             cargarEstudiantesTutor();
-            poblarSelectEstudiantesComportamiento();
-            document.getElementById('cuerpoFaltasTutor').innerHTML = '<tr><td colspan="6" class="text-center text-muted">Cargando...</td></tr>';
+            document.getElementById('cuerpoFaltasTutor').innerHTML = '<tr><td colspan="6" class="text-center text-muted">Presione "Generar / Consultar" para buscar faltas</td></tr>';
             document.getElementById('resumenFaltas').textContent = '';
-            cargarFaltasTutor();
+            document.getElementById('cuerpoComportamientoTutor').innerHTML = '<tr><td colspan="6" class="text-center text-muted">Cargando...</td></tr>';
             cargarComportamientoTutor();
         }
 
@@ -429,6 +431,7 @@
                     return;
                 }
                 estudiantesTutor = await res.json();
+                poblarSelectEstudiantesComportamiento();
                 info.textContent = `Curso: ${c.curso} ${c.paralelo}${c.especialidad ? ' - ' + c.especialidad : ''} · ${c.total_materias} materia(s)`;
 
                 document.getElementById('contadorTutor').textContent = estudiantesTutor.length;
