@@ -286,6 +286,125 @@ router.delete('/materias/:id/desasignar-alumno/:eid', async (req, res) => {
     }
 });
 
+// ========== ASIGNACION MASIVA POR CURSO ==========
+
+// Materias y alumnos de un curso (paralelo + especialidad)
+router.get('/asignacion-curso', async (req, res) => {
+    try {
+        const db = req.db;
+        const schoolId = req.session.user.school_id;
+        const { curso, paralelo, especialidad } = req.query;
+        if (!curso || !paralelo) return res.json({ materias: [], alumnos: [], total_materias: 0 });
+        const esp = (especialidad || '').trim();
+
+        const [materias] = await db.query(
+            `SELECT id, nombre_materia FROM materias
+             WHERE school_id = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')
+             ORDER BY nombre_materia`,
+            [schoolId, curso, paralelo, esp]
+        );
+        if (materias.length === 0) return res.json({ materias: [], alumnos: [], total_materias: 0 });
+
+        const placeholders = materias.map(() => '?').join(',');
+        const [alumnos] = await db.query(`
+            SELECT e.id, e.cedula, e.nombres_apellidos,
+                   (SELECT COUNT(*) FROM grupos g
+                    WHERE g.estudiante_id = e.id AND g.materia_id IN (${placeholders})
+                   ) AS materias_asignadas
+            FROM estudiantes e
+            WHERE e.school_id = ? AND e.activo = 1 AND e.curso = ? AND e.paralelo = ?
+              ${esp ? 'AND e.especialidad = ?' : ''}
+            ORDER BY e.nombres_apellidos
+        `, esp
+            ? [...materias.map(m => m.id), schoolId, curso, paralelo, esp]
+            : [...materias.map(m => m.id), schoolId, curso, paralelo]);
+
+        res.json({ materias, alumnos, total_materias: materias.length });
+    } catch (err) {
+        console.error('Error al listar asignacion por curso:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Asignar alumnos a TODAS las materias del curso
+router.post('/asignacion-curso', async (req, res) => {
+    try {
+        const db = req.db;
+        const schoolId = req.session.user.school_id;
+        const { curso, paralelo, especialidad, estudiante_ids } = req.body;
+        const esp = (especialidad || '').trim();
+        if (!curso || !paralelo || !Array.isArray(estudiante_ids) || estudiante_ids.length === 0) {
+            return res.status(400).json({ error: 'Curso, paralelo y al menos un alumno son requeridos' });
+        }
+
+        const [materias] = await db.query(
+            `SELECT id, nombre_materia FROM materias
+             WHERE school_id = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')`,
+            [schoolId, curso, paralelo, esp]
+        );
+        if (materias.length === 0) {
+            return res.status(400).json({ error: 'No hay materias registradas para ese curso' });
+        }
+
+        let registros = 0;
+        for (const m of materias) {
+            const nombreGrupo = `${m.nombre_materia} - ${curso} ${paralelo}`;
+            for (const eid of estudiante_ids) {
+                try {
+                    const [r] = await db.query(
+                        'INSERT IGNORE INTO grupos (nombre_grupo, materia_id, estudiante_id, school_id) VALUES (?, ?, ?, ?)',
+                        [nombreGrupo, m.id, eid, schoolId]
+                    );
+                    registros += r.affectedRows;
+                } catch (e) { /* skip duplicates */ }
+            }
+        }
+        res.json({
+            message: `${estudiante_ids.length} alumno(s) asignados a ${materias.length} materia(s)`,
+            materias: materias.length,
+            alumnos: estudiante_ids.length,
+            registros
+        });
+    } catch (err) {
+        console.error('Error al asignar por curso:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Quitar alumnos de TODAS las materias del curso
+router.delete('/asignacion-curso', async (req, res) => {
+    try {
+        const db = req.db;
+        const schoolId = req.session.user.school_id;
+        const { curso, paralelo, especialidad, estudiante_ids } = req.body;
+        const esp = (especialidad || '').trim();
+        if (!curso || !paralelo || !Array.isArray(estudiante_ids) || estudiante_ids.length === 0) {
+            return res.status(400).json({ error: 'Curso, paralelo y al menos un alumno son requeridos' });
+        }
+
+        const [materias] = await db.query(
+            `SELECT id FROM materias
+             WHERE school_id = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')`,
+            [schoolId, curso, paralelo, esp]
+        );
+        if (materias.length === 0) return res.json({ message: 'No hay materias para ese curso', registros: 0 });
+
+        const matIds = materias.map(m => m.id);
+        const [r] = await db.query(
+            `DELETE FROM grupos WHERE materia_id IN (${matIds.map(() => '?').join(',')})
+             AND estudiante_id IN (${estudiante_ids.map(() => '?').join(',')})`,
+            [...matIds, ...estudiante_ids]
+        );
+        res.json({
+            message: `${r.affectedRows} asignacion(es) removida(s) de ${materias.length} materia(s)`,
+            registros: r.affectedRows
+        });
+    } catch (err) {
+        console.error('Error al quitar por curso:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ========== TUTORES ==========
 
 // Listar tutores

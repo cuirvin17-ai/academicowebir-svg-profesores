@@ -200,6 +200,47 @@
                     <!-- TAB: Asignar Alumnos -->
                     <div class="tab-pane fade" id="tabAsignarAlumnos">
                         <div class="card">
+                            <div class="card-header"><i class="fas fa-bolt me-1"></i>Asignación Rápida por Curso</div>
+                            <div class="card-body">
+                                <p class="form-text mb-3">Selecciona curso, paralelo y especialidad: los alumnos marcados entrarán a <strong>TODAS las materias</strong> de ese curso de una sola vez.</p>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold mb-1">Curso</label>
+                                        <select class="form-select form-select-sm" id="rapCurso" onchange="cargarParalelosRap()">
+                                            <option value="">Seleccionar curso...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold mb-1">Paralelo</label>
+                                        <select class="form-select form-select-sm" id="rapParalelo" onchange="cargarEspecialidadesRap()">
+                                            <option value="">Seleccionar...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold mb-1">Especialidad</label>
+                                        <select class="form-select form-select-sm" id="rapEspecialidad" onchange="cargarAlumnosRap()">
+                                            <option value="">Sin especialidad</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <div id="rapInfoMaterias" class="form-text fw-bold"></div>
+                                    </div>
+                                </div>
+                                <div id="rapListaAlumnos" style="max-height:300px;overflow-y:auto;border:1px solid #ddd;padding:8px;border-radius:5px;">
+                                    <p class="text-muted text-center mb-0">Seleccione un curso para ver los alumnos</p>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <button class="btn btn-sm btn-outline-success" onclick="marcarAlumnosRap(false)"><i class="fas fa-check-double me-1"></i>Marcar no asignados</button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="marcarAlumnosRap(true)"><i class="fas fa-check me-1"></i>Marcar todos</button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="desmarcarAlumnosRap()"><i class="fas fa-eraser me-1"></i>Limpiar</button>
+                                    <span class="flex-grow-1"></span>
+                                    <button class="btn btn-primary" onclick="asignarCursoRap()"><i class="fas fa-arrow-right me-1"></i>Asignar a todas las materias</button>
+                                    <button class="btn btn-outline-danger" onclick="quitarCursoRap()"><i class="fas fa-arrow-left me-1"></i>Quitar de todas las materias</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-3">
                             <div class="card-header"><i class="fas fa-user-graduate me-1"></i>Asignar Alumnos a Materia</div>
                             <div class="card-body">
                                 <div class="row g-2 mb-3">
@@ -653,6 +694,7 @@
                 selTutor.innerHTML += `<option value="${t.id}">${t.nombre} (${t.cedula})</option>`;
             });
             cargarFiltrosAsigAlumnos();
+            cargarCursosRap();
         }
 
         // === FILTROS ASIGNAR ALUMNOS ===
@@ -731,6 +773,169 @@
                 document.getElementById('filtroMateriaInfo').style.display = 'none';
                 document.getElementById('listaDisponibles').innerHTML = '';
                 document.getElementById('listaAsignados').innerHTML = '';
+            }
+        }
+
+        // === ASIGNACIÓN RÁPIDA POR CURSO ===
+        let rapData = { materias: [], alumnos: [], total: 0 };
+
+        function cargarCursosRap() {
+            const sel = document.getElementById('rapCurso');
+            const actual = sel.value;
+            sel.innerHTML = '<option value="">Seleccionar curso...</option>';
+            [...new Set(materiasData.map(m => m.curso).filter(Boolean))].sort().forEach(c => {
+                sel.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+            if (actual) sel.value = actual;
+            cargarParalelosRap(true);
+        }
+
+        function cargarParalelosRap(soloCargar) {
+            const curso = document.getElementById('rapCurso').value;
+            const sel = document.getElementById('rapParalelo');
+            const actual = sel.value;
+            sel.innerHTML = '<option value="">Seleccionar...</option>';
+            const paralelos = [...new Set(materiasData.filter(m => m.curso === curso).map(m => m.paralelo).filter(Boolean))].sort();
+            paralelos.forEach(p => sel.innerHTML += `<option value="${p}">${p}</option>`);
+            if (paralelos.length === 1) sel.value = paralelos[0];
+            else if (paralelos.includes(actual)) sel.value = actual;
+            else sel.value = '';
+            cargarEspecialidadesRap(soloCargar);
+        }
+
+        function cargarEspecialidadesRap(soloCargar) {
+            const curso = document.getElementById('rapCurso').value;
+            const paralelo = document.getElementById('rapParalelo').value;
+            const sel = document.getElementById('rapEspecialidad');
+            const actual = sel.value;
+            sel.innerHTML = '<option value="">Sin especialidad</option>';
+            const especialidades = [...new Set(
+                materiasData.filter(m => m.curso === curso && m.paralelo === paralelo)
+                    .map(m => (m.especialidad || '').trim()).filter(Boolean)
+            )].sort();
+            especialidades.forEach(e => sel.innerHTML += `<option value="${e}">${e}</option>`);
+            if (especialidades.includes(actual)) sel.value = actual; else sel.value = '';
+            if (!soloCargar) cargarAlumnosRap();
+        }
+
+        async function cargarAlumnosRap() {
+            const curso = document.getElementById('rapCurso').value;
+            const paralelo = document.getElementById('rapParalelo').value;
+            const especialidad = document.getElementById('rapEspecialidad').value;
+            const cont = document.getElementById('rapListaAlumnos');
+            const info = document.getElementById('rapInfoMaterias');
+            if (!curso || !paralelo) {
+                cont.innerHTML = '<p class="text-muted text-center mb-0">Seleccione un curso para ver los alumnos</p>';
+                info.textContent = '';
+                rapData = { materias: [], alumnos: [], total: 0 };
+                return;
+            }
+            try {
+                const params = new URLSearchParams({ curso, paralelo, especialidad });
+                const res = await fetch(`/api/rector/asignacion-curso?${params}`);
+                const data = await res.json();
+                rapData = { materias: data.materias || [], alumnos: data.alumnos || [], total: data.total_materias || 0 };
+
+                if (rapData.total === 0) {
+                    cont.innerHTML = '<p class="text-danger text-center mb-0">No hay materias registradas para este curso</p>';
+                    info.textContent = '';
+                    return;
+                }
+
+                info.innerHTML = `<i class="fas fa-book me-1"></i>${rapData.total} materias: ${rapData.materias.map(m => m.nombre_materia).join(', ')}`;
+
+                if (rapData.alumnos.length === 0) {
+                    cont.innerHTML = '<p class="text-muted text-center mb-0">No hay alumnos activos en este curso</p>';
+                    return;
+                }
+
+                let html = '';
+                rapData.alumnos.forEach(a => {
+                    const n = parseInt(a.materias_asignadas) || 0;
+                    let badge;
+                    if (n >= rapData.total) badge = '<span class="badge bg-success">Completo</span>';
+                    else if (n > 0) badge = `<span class="badge bg-warning text-dark">Parcial ${n}/${rapData.total}</span>`;
+                    else badge = '<span class="badge bg-danger">Sin asignar</span>';
+                    html += `
+                        <div class="form-check d-flex justify-content-between align-items-center">
+                            <div>
+                                <input class="form-check-input rap-check" type="checkbox" value="${a.id}" data-n="${n}" id="rap_${a.id}">
+                                <label class="form-check-label" for="rap_${a.id}">${a.nombres_apellidos} (${a.cedula})</label>
+                            </div>
+                            ${badge}
+                        </div>`;
+                });
+                cont.innerHTML = html;
+            } catch (err) {
+                showNotification('Error al cargar alumnos del curso', 'danger');
+            }
+        }
+
+        function marcarAlumnosRap(soloNoAsignados) {
+            document.querySelectorAll('#rapListaAlumnos .rap-check').forEach(cb => {
+                cb.checked = soloNoAsignados ? (parseInt(cb.dataset.n) || 0) === 0 : true;
+            });
+        }
+
+        function desmarcarAlumnosRap() {
+            document.querySelectorAll('#rapListaAlumnos .rap-check').forEach(cb => cb.checked = false);
+        }
+
+        function alumnosSeleccionadosRap() {
+            return Array.from(document.querySelectorAll('#rapListaAlumnos .rap-check:checked')).map(c => parseInt(c.value));
+        }
+
+        async function asignarCursoRap() {
+            const curso = document.getElementById('rapCurso').value;
+            const paralelo = document.getElementById('rapParalelo').value;
+            const especialidad = document.getElementById('rapEspecialidad').value;
+            const ids = alumnosSeleccionadosRap();
+            if (!curso || !paralelo) { showNotification('Seleccione curso y paralelo', 'warning'); return; }
+            if (ids.length === 0) { showNotification('Marque al menos un alumno', 'warning'); return; }
+            try {
+                const res = await fetch('/api/rector/asignacion-curso', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ curso, paralelo, especialidad, estudiante_ids: ids })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showNotification(result.message, 'success');
+                    await cargarAlumnosRap();
+                    await cargarMaterias();
+                    poblarSelectMaterias();
+                } else {
+                    showNotification(result.error || 'Error', 'danger');
+                }
+            } catch (err) {
+                showNotification('Error de conexion', 'danger');
+            }
+        }
+
+        async function quitarCursoRap() {
+            const curso = document.getElementById('rapCurso').value;
+            const paralelo = document.getElementById('rapParalelo').value;
+            const especialidad = document.getElementById('rapEspecialidad').value;
+            const ids = alumnosSeleccionadosRap();
+            if (ids.length === 0) { showNotification('Marque al menos un alumno', 'warning'); return; }
+            if (!confirm(`Quitar ${ids.length} alumno(s) de TODAS las materias de este curso?`)) return;
+            try {
+                const res = await fetch('/api/rector/asignacion-curso', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ curso, paralelo, especialidad, estudiante_ids: ids })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showNotification(result.message, 'success');
+                    await cargarAlumnosRap();
+                    await cargarMaterias();
+                    poblarSelectMaterias();
+                } else {
+                    showNotification(result.error || 'Error', 'danger');
+                }
+            } catch (err) {
+                showNotification('Error de conexion', 'danger');
             }
         }
 
