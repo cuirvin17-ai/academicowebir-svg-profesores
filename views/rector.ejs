@@ -202,6 +202,35 @@
                         <div class="card">
                             <div class="card-header"><i class="fas fa-user-graduate me-1"></i>Asignar Alumnos a Materia</div>
                             <div class="card-body">
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold mb-1">Curso</label>
+                                        <select class="form-select form-select-sm" id="filtroAsigCurso" onchange="cargarParalelosAsigAlumnos()">
+                                            <option value="">Todos los cursos</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold mb-1">Paralelo</label>
+                                        <select class="form-select form-select-sm" id="filtroAsigParalelo" onchange="cargarEspecialidadesAsigAlumnos()">
+                                            <option value="">Todos</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold mb-1">Especialidad</label>
+                                        <select class="form-select form-select-sm" id="filtroAsigEspecialidad" onchange="poblarMateriasAlumno()">
+                                            <option value="">Todas</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold mb-1">Estado de alumnos</label>
+                                        <select class="form-select form-select-sm" id="filtroAsigEstado" onchange="poblarMateriasAlumno()">
+                                            <option value="">Todas las materias</option>
+                                            <option value="sin">Solo materias SIN alumnos</option>
+                                            <option value="con">Solo materias CON alumnos</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="resumenMateriasAlumno" class="form-text fw-bold mb-2"></div>
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Seleccionar Materia</label>
                                     <select class="form-select" id="selectMateriaAlumno" onchange="cargarAsignacionAlumnos()">
@@ -613,18 +642,96 @@
         }
 
         function poblarSelectMaterias() {
-            ['selectMateriaDocente', 'selectMateriaAlumno'].forEach(id => {
-                const sel = document.getElementById(id);
-                sel.innerHTML = '<option value="">Seleccionar materia...</option>';
-                materiasData.forEach(m => {
-                    sel.innerHTML += `<option value="${m.id}">${m.nombre_materia} - ${m.curso} ${m.paralelo}${m.especialidad ? ' (' + m.especialidad + ')' : ''}</option>`;
-                });
+            const sel = document.getElementById('selectMateriaDocente');
+            sel.innerHTML = '<option value="">Seleccionar materia...</option>';
+            materiasData.forEach(m => {
+                sel.innerHTML += `<option value="${m.id}">${m.nombre_materia} - ${m.curso} ${m.paralelo}${m.especialidad ? ' (' + m.especialidad + ')' : ''}</option>`;
             });
             const selTutor = document.getElementById('selectTutorMateria');
             selTutor.innerHTML = '<option value="">Seleccionar tutor...</option>';
             tutoresData.forEach(t => {
                 selTutor.innerHTML += `<option value="${t.id}">${t.nombre} (${t.cedula})</option>`;
             });
+            cargarFiltrosAsigAlumnos();
+        }
+
+        // === FILTROS ASIGNAR ALUMNOS ===
+        function cargarFiltrosAsigAlumnos() {
+            const selCurso = document.getElementById('filtroAsigCurso');
+            const cursoActual = selCurso.value;
+            const cursos = [...new Set(materiasData.map(m => m.curso).filter(Boolean))].sort();
+            selCurso.innerHTML = '<option value="">Todos los cursos</option>';
+            cursos.forEach(c => selCurso.innerHTML += `<option value="${c}">${c}</option>`);
+            if (cursoActual) selCurso.value = cursoActual;
+            cargarParalelosAsigAlumnos(true);
+            poblarMateriasAlumno();
+        }
+
+        function cargarParalelosAsigAlumnos(soloCargar) {
+            const curso = document.getElementById('filtroAsigCurso').value;
+            const sel = document.getElementById('filtroAsigParalelo');
+            const actual = sel.value;
+            sel.innerHTML = '<option value="">Todos</option>';
+            const paralelos = [...new Set(materiasData.filter(m => !curso || m.curso === curso).map(m => m.paralelo).filter(Boolean))].sort();
+            paralelos.forEach(p => sel.innerHTML += `<option value="${p}">${p}</option>`);
+            if (actual && paralelos.includes(actual)) sel.value = actual;
+            else sel.value = '';
+            cargarEspecialidadesAsigAlumnos(soloCargar);
+        }
+
+        function cargarEspecialidadesAsigAlumnos(soloCargar) {
+            const curso = document.getElementById('filtroAsigCurso').value;
+            const paralelo = document.getElementById('filtroAsigParalelo').value;
+            const sel = document.getElementById('filtroAsigEspecialidad');
+            const actual = sel.value;
+            sel.innerHTML = '<option value="">Todas</option>';
+            const especialidades = [...new Set(
+                materiasData.filter(m => (!curso || m.curso === curso) && (!paralelo || m.paralelo === paralelo))
+                    .map(m => (m.especialidad || '').trim()).filter(Boolean)
+            )].sort();
+            especialidades.forEach(e => sel.innerHTML += `<option value="${e}">${e}</option>`);
+            if (actual && especialidades.includes(actual)) sel.value = actual;
+            else sel.value = '';
+            if (!soloCargar) poblarMateriasAlumno();
+        }
+
+        function poblarMateriasAlumno() {
+            const curso = document.getElementById('filtroAsigCurso').value;
+            const paralelo = document.getElementById('filtroAsigParalelo').value;
+            const especialidad = document.getElementById('filtroAsigEspecialidad').value;
+            const estado = document.getElementById('filtroAsigEstado').value;
+            const sel = document.getElementById('selectMateriaAlumno');
+            const actual = sel.value;
+
+            const filtradas = materiasData.filter(m => {
+                if (curso && m.curso !== curso) return false;
+                if (paralelo && m.paralelo !== paralelo) return false;
+                if (especialidad && (m.especialidad || '') !== especialidad) return false;
+                const n = parseInt(m.total_asignados) || 0;
+                if (estado === 'sin' && n > 0) return false;
+                if (estado === 'con' && n === 0) return false;
+                return true;
+            });
+
+            const sinAlumnos = filtradas.filter(m => !(parseInt(m.total_asignados) > 0)).length;
+            document.getElementById('resumenMateriasAlumno').innerHTML =
+                `<i class="fas fa-list me-1"></i>${filtradas.length} materia(s) · ` +
+                `<span class="${sinAlumnos > 0 ? 'text-danger' : 'text-success'}">${sinAlumnos} sin alumnos asignados</span>`;
+
+            sel.innerHTML = '<option value="">Seleccionar materia...</option>';
+            filtradas.forEach(m => {
+                const n = parseInt(m.total_asignados) || 0;
+                const estadoTxt = n > 0 ? `${n} alumnos` : 'SIN ALUMNOS';
+                const clase = n > 0 ? '' : 'text-danger';
+                sel.innerHTML += `<option value="${m.id}" class="${clase}">${m.nombre_materia} - ${m.curso} ${m.paralelo}${m.especialidad ? ' (' + m.especialidad + ')' : ''} [${estadoTxt}]</option>`;
+            });
+            if (actual && filtradas.some(m => m.id == actual)) sel.value = actual;
+            else sel.value = '';
+            if (!sel.value) {
+                document.getElementById('filtroMateriaInfo').style.display = 'none';
+                document.getElementById('listaDisponibles').innerHTML = '';
+                document.getElementById('listaAsignados').innerHTML = '';
+            }
         }
 
         function poblarSelectDocentes() {
@@ -886,6 +993,8 @@
                 const result = await res.json();
                 if (res.ok) {
                     showNotification(result.message, 'success');
+                    await cargarMaterias();
+                    poblarSelectMaterias();
                     cargarAsignacionAlumnos();
                 }
             } catch (err) {
@@ -903,6 +1012,8 @@
                 await fetch(`/api/rector/materias/${matId}/desasignar-alumno/${eid}`, { method: 'DELETE' });
             }
             showNotification(`${eids.length} alumnos desasignados`, 'success');
+            await cargarMaterias();
+            poblarSelectMaterias();
             cargarAsignacionAlumnos();
         }
 

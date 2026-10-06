@@ -15,7 +15,8 @@ router.get('/materias', async (req, res) => {
         const schoolId = req.session.user.school_id;
         const [rows] = await db.query(`
             SELECT m.*, u.nombre AS docente_nombre, u.telefono AS docente_telefono,
-                   t.nombre AS tutor_nombre, t.telefono AS tutor_telefono
+                   t.nombre AS tutor_nombre, t.telefono AS tutor_telefono,
+                   (SELECT COUNT(DISTINCT g.estudiante_id) FROM grupos g WHERE g.materia_id = m.id) AS total_asignados
             FROM materias m
             LEFT JOIN usuarios u ON m.docente_id = u.id
             LEFT JOIN tutores t ON m.tutor_id = t.id
