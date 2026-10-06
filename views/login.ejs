@@ -61,7 +61,7 @@
         }
 
         .login-header {
-            background: rgba(13, 71, 161, 0.65);
+            background: rgba(70, 105, 145, 0.6);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             color: white;
@@ -70,7 +70,7 @@
             transition: background 0.3s ease;
         }
         .login-header:hover {
-            background: rgba(13, 71, 161, 0.8);
+            background: rgba(70, 105, 145, 0.72);
         }
         .login-header img {
             width: 120px; height: 120px;
@@ -81,8 +81,8 @@
         }
         .login-header img:hover {
             transform: scale(1.1) rotate(5deg);
-            box-shadow: 0 0 30px rgba(33, 150, 243, 0.6);
-            border-color: rgba(33, 150, 243, 0.8);
+            box-shadow: 0 0 30px rgba(134, 173, 212, 0.6);
+            border-color: rgba(134, 173, 212, 0.8);
         }
         .login-header h3 {
             font-weight: 700;
@@ -110,8 +110,8 @@
         }
         .input-group:hover ~ .form-label,
         .input-group:hover + .form-label {
-            color: #42a5f5;
-            text-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+            color: #86add4;
+            text-shadow: 0 0 10px rgba(134, 173, 212, 0.5);
         }
 
         .input-group {
@@ -121,15 +121,15 @@
         }
         .input-group:hover {
             transform: scale(1.02);
-            box-shadow: 0 0 25px rgba(33, 150, 243, 0.35);
+            box-shadow: 0 0 25px rgba(134, 173, 212, 0.35);
         }
         .input-group:focus-within {
             transform: scale(1.02);
-            box-shadow: 0 0 20px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 0 20px rgba(134, 173, 212, 0.3);
         }
         .input-group:hover .input-group-text {
-            background: rgba(33, 150, 243, 0.2) !important;
-            color: #42a5f5;
+            background: rgba(134, 173, 212, 0.2) !important;
+            color: #86add4;
         }
         .input-group:hover .form-control {
             background: rgba(255, 255, 255, 0.15) !important;
@@ -154,13 +154,13 @@
         .form-control::placeholder { color: rgba(255, 255, 255, 0.5); }
         .form-control:focus {
             background: rgba(255, 255, 255, 0.18) !important;
-            border-color: rgba(33, 150, 243, 0.6);
+            border-color: rgba(134, 173, 212, 0.6);
             box-shadow: none;
             color: white;
         }
 
         .btn-login {
-            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            background: linear-gradient(135deg, #52779f, #456787);
             border: none;
             padding: 14px;
             font-size: 1.05em;
@@ -181,9 +181,9 @@
         }
         .btn-login:hover::before { left: 100%; }
         .btn-login:hover {
-            background: linear-gradient(135deg, #1565c0, #0d47a1);
+            background: linear-gradient(135deg, #4a6f93, #3d5d7a);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(13, 71, 161, 0.4);
+            box-shadow: 0 6px 20px rgba(70, 105, 145, 0.4);
         }
         .btn-login:active { transform: translateY(0); }
 
@@ -211,7 +211,7 @@
                 </div>
                 <div class="login-body">
                     <% if (error) { %>
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="background: rgba(244,67,54,0.2); border: 1px solid rgba(244,67,54,0.3); color: #ffcdd2; border-radius: 10px;">
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="background: rgba(214,127,127,0.22); border: 1px solid rgba(214,127,127,0.32); color: #f2d4d4; border-radius: 10px;">
                             <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
                         </div>
