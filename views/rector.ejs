@@ -264,6 +264,59 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="card mt-3">
+                            <div class="card-header"><i class="fas fa-chalkboard-teacher me-1"></i>Asignar Tutor a Curso</div>
+                            <div class="card-body">
+                                <p class="form-text mb-3">Al asignar el tutor, todas las materias del curso seleccionado quedan con ese tutor automaticamente.</p>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Tutor</label>
+                                        <select class="form-select" id="selectTutorCurso">
+                                            <option value="">Seleccionar tutor...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Curso</label>
+                                        <select class="form-select" id="selectAsigCurso" onchange="cargarParalelosTutor()">
+                                            <option value="">Seleccionar curso...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold">Paralelo</label>
+                                        <select class="form-select" id="selectAsigParalelo" onchange="cargarEspecialidadesTutor()">
+                                            <option value="">Seleccionar...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold">Especialidad</label>
+                                        <select class="form-select" id="selectAsigEspecialidad">
+                                            <option value="">Sin especialidad</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button class="btn btn-primary w-100" onclick="asignarTutorCurso()">
+                                            <i class="fas fa-check me-1"></i>Asignar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm table-hover">
+                                        <thead class="table-info text-center">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Tutor</th>
+                                                <th>Curso</th>
+                                                <th>Paralelo</th>
+                                                <th>Especialidad</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cuerpoAsignacionTutor"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- TAB: Usuarios Conectados -->
@@ -425,6 +478,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await Promise.all([cargarMaterias(), cargarDocentes(), cargarTutores()]);
             poblarSelectMaterias();
+            cargarAsignacionTutores();
         });
 
         async function cargarMaterias() {
@@ -432,6 +486,7 @@
                 const res = await fetch('/api/rector/materias');
                 materiasData = await res.json();
                 renderizarMaterias();
+                cargarCursosTutor();
             } catch (err) {
                 showNotification('Error al cargar materias', 'danger');
             }
@@ -893,9 +948,124 @@
         function poblarSelectTutores() {
             const sel = document.getElementById('selectTutorMateria');
             sel.innerHTML = '<option value="">Seleccionar tutor...</option>';
+            const selCurso = document.getElementById('selectTutorCurso');
+            selCurso.innerHTML = '<option value="">Seleccionar tutor...</option>';
             tutoresData.forEach(t => {
-                sel.innerHTML += `<option value="${t.id}">${t.nombre} (${t.cedula})</option>`;
+                const opcion = `<option value="${t.id}">${t.nombre} (${t.cedula})</option>`;
+                sel.innerHTML += opcion;
+                selCurso.innerHTML += opcion;
             });
+        }
+
+        // === ASIGNAR TUTOR A CURSO ===
+        function cargarCursosTutor() {
+            const sel = document.getElementById('selectAsigCurso');
+            const actual = sel.value;
+            sel.innerHTML = '<option value="">Seleccionar curso...</option>';
+            const cursos = [...new Set(materiasData.map(m => m.curso).filter(Boolean))].sort();
+            cursos.forEach(c => {
+                sel.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+            if (actual) sel.value = actual;
+        }
+
+        function cargarParalelosTutor() {
+            const curso = document.getElementById('selectAsigCurso').value;
+            const sel = document.getElementById('selectAsigParalelo');
+            sel.innerHTML = '<option value="">Seleccionar...</option>';
+            const paralelos = [...new Set(materiasData.filter(m => m.curso === curso).map(m => m.paralelo).filter(Boolean))].sort();
+            paralelos.forEach(p => {
+                sel.innerHTML += `<option value="${p}">${p}</option>`;
+            });
+            document.getElementById('selectAsigEspecialidad').innerHTML = '<option value="">Sin especialidad</option>';
+        }
+
+        function cargarEspecialidadesTutor() {
+            const curso = document.getElementById('selectAsigCurso').value;
+            const paralelo = document.getElementById('selectAsigParalelo').value;
+            const sel = document.getElementById('selectAsigEspecialidad');
+            sel.innerHTML = '<option value="">Sin especialidad</option>';
+            const especialidades = [...new Set(
+                materiasData.filter(m => m.curso === curso && m.paralelo === paralelo)
+                    .map(m => (m.especialidad || '').trim()).filter(Boolean)
+            )].sort();
+            especialidades.forEach(e => {
+                sel.innerHTML += `<option value="${e}">${e}</option>`;
+            });
+        }
+
+        async function asignarTutorCurso() {
+            const tutorId = document.getElementById('selectTutorCurso').value;
+            const curso = document.getElementById('selectAsigCurso').value;
+            const paralelo = document.getElementById('selectAsigParalelo').value;
+            const especialidad = document.getElementById('selectAsigEspecialidad').value;
+            if (!tutorId || !curso || !paralelo) {
+                showNotification('Seleccione tutor, curso y paralelo', 'warning');
+                return;
+            }
+            try {
+                const res = await fetch('/api/rector/asignacion-tutores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tutor_id: parseInt(tutorId), curso, paralelo, especialidad })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showNotification(`${result.message} (${result.materias_actualizadas} materias actualizadas)`, 'success');
+                    await Promise.all([cargarAsignacionTutores(), cargarMaterias()]);
+                    poblarSelectMaterias();
+                } else {
+                    showNotification(result.error || 'Error', 'danger');
+                }
+            } catch (err) {
+                showNotification('Error de conexion', 'danger');
+            }
+        }
+
+        async function cargarAsignacionTutores() {
+            try {
+                const res = await fetch('/api/rector/asignacion-tutores');
+                const asignaciones = await res.json();
+                const tbody = document.getElementById('cuerpoAsignacionTutor');
+                if (asignaciones.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay tutores asignados a cursos</td></tr>';
+                    return;
+                }
+                let html = '';
+                asignaciones.forEach((a, i) => {
+                    html += `
+                        <tr>
+                            <td class="text-center">${i + 1}</td>
+                            <td>${a.tutor_nombre} (${a.cedula})</td>
+                            <td class="text-center">${a.curso}</td>
+                            <td class="text-center">${a.paralelo}</td>
+                            <td class="text-center">${a.especialidad || '-'}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-danger" onclick="eliminarAsignacionTutor(${a.id})" title="Desasignar"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch (err) {
+                showNotification('Error al cargar asignaciones de tutores', 'danger');
+            }
+        }
+
+        async function eliminarAsignacionTutor(id) {
+            if (!confirm('Desasignar este tutor del curso? Se quitara de las materias del curso.')) return;
+            try {
+                const res = await fetch(`/api/rector/asignacion-tutores/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (res.ok) {
+                    showNotification('Tutor desasignado del curso', 'success');
+                    await Promise.all([cargarAsignacionTutores(), cargarMaterias()]);
+                    poblarSelectMaterias();
+                } else {
+                    showNotification(result.error || 'Error', 'danger');
+                }
+            } catch (err) {
+                showNotification('Error de conexion', 'danger');
+            }
         }
 
         async function cargarSesionesActivas() {

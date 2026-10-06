@@ -202,6 +202,30 @@ app.use('/api/diagnostico', requireAuth, injectDB, diagnosticoRoutes);
     } catch (err) {
         console.log('Migración nombres_destrezas:', err.message);
     }
+
+    // Migración: especialidad en asignacion_tutores (asignar tutor a curso+paralelo+especialidad)
+    try {
+        const db = getPool();
+        await db.query(`CREATE TABLE IF NOT EXISTS asignacion_tutores (
+            id INT NOT NULL AUTO_INCREMENT,
+            tutor_id INT NOT NULL,
+            curso VARCHAR(50) NOT NULL,
+            paralelo VARCHAR(10) NOT NULL,
+            especialidad VARCHAR(100) DEFAULT NULL,
+            anio_lectivo VARCHAR(20) DEFAULT '2026-2027',
+            school_id INT DEFAULT NULL,
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY unique_tutor_curso (tutor_id, curso, paralelo, anio_lectivo, school_id)
+        )`);
+        const [cols] = await db.query("SHOW COLUMNS FROM asignacion_tutores LIKE 'especialidad'");
+        if (cols.length === 0) {
+            await db.query("ALTER TABLE asignacion_tutores ADD COLUMN especialidad VARCHAR(100) DEFAULT NULL AFTER paralelo");
+            console.log('Migración: columna especialidad agregada a asignacion_tutores');
+        }
+    } catch (err) {
+        console.log('Migración asignacion_tutores:', err.message);
+    }
 })();
 
 app.listen(PORT, () => {

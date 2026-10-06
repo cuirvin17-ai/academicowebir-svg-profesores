@@ -367,7 +367,7 @@ router.get('/asignacion-tutores', async (req, res) => {
             FROM asignacion_tutores at2
             INNER JOIN tutores t ON at2.tutor_id = t.id
             WHERE at2.school_id = ?
-            ORDER BY at2.curso, at2.paralelo
+            ORDER BY at2.curso, at2.paralelo, at2.especialidad
         `, [schoolId]);
         res.json(rows);
     } catch (err) {
@@ -375,27 +375,45 @@ router.get('/asignacion-tutores', async (req, res) => {
     }
 });
 
-// Asignar tutor a curso
+// Asignar tutor a curso (paralelo + especialidad) y actualizar materias automaticamente
 router.post('/asignacion-tutores', async (req, res) => {
     try {
         const db = req.db;
         const schoolId = req.session.user.school_id;
+        const anio = req.session.user.anio_lectivo || '2026-2027';
         const { tutor_id, curso, paralelo } = req.body;
+        const especialidad = (req.body.especialidad || '').trim();
         if (!tutor_id || !curso || !paralelo) {
             return res.status(400).json({ error: 'Tutor, curso y paralelo son requeridos' });
         }
+
+        // Upsert de la asignacion tutor -> curso
         const [existing] = await db.query(
-            'SELECT id FROM asignacion_tutores WHERE tutor_id = ? AND curso = ? AND paralelo = ? AND school_id = ?',
-            [tutor_id, curso, paralelo, schoolId]
+            `SELECT id FROM asignacion_tutores
+             WHERE curso = ? AND paralelo = ? AND school_id = ? AND anio_lectivo = ?
+               AND IFNULL(especialidad, '') = IFNULL(?, '')`,
+            [curso, paralelo, schoolId, anio, especialidad]
         );
         if (existing.length > 0) {
-            return res.status(400).json({ error: 'Este tutor ya esta asignado a este curso' });
+            await db.query('UPDATE asignacion_tutores SET tutor_id = ? WHERE id = ?', [tutor_id, existing[0].id]);
+        } else {
+            await db.query(
+                'INSERT INTO asignacion_tutores (tutor_id, curso, paralelo, especialidad, anio_lectivo, school_id) VALUES (?, ?, ?, ?, ?, ?)',
+                [tutor_id, curso, paralelo, especialidad || null, anio, schoolId]
+            );
         }
-        await db.query(
-            'INSERT INTO asignacion_tutores (tutor_id, curso, paralelo, school_id) VALUES (?, ?, ?, ?)',
-            [tutor_id, curso, paralelo, schoolId]
+
+        // Asignar el tutor a todas las materias de ese curso/paralelo/especialidad
+        const [upd] = await db.query(
+            `UPDATE materias SET tutor_id = ?
+             WHERE curso = ? AND paralelo = ? AND school_id = ? AND anio_lectivo = ?
+               AND IFNULL(especialidad, '') = IFNULL(?, '')`,
+            [tutor_id, curso, paralelo, schoolId, anio, especialidad]
         );
-        res.json({ message: 'Tutor asignado exitosamente' });
+        res.json({
+            message: `Tutor asignado al curso ${curso} ${paralelo}${especialidad ? ' (' + especialidad + ')' : ''}`,
+            materias_actualizadas: upd.affectedRows
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -406,9 +424,26 @@ router.delete('/asignacion-tutores/:id', async (req, res) => {
     try {
         const db = req.db;
         const schoolId = req.session.user.school_id;
+        const anio = req.session.user.anio_lectivo || '2026-2027';
         const { id } = req.params;
-        await db.query('DELETE FROM asignacion_tutores WHERE id = ? AND school_id = ?', [id, schoolId]);
-        res.json({ message: 'Tutor desasignado exitosamente' });
+        const [rows] = await db.query(
+            'SELECT * FROM asignacion_tutores WHERE id = ? AND school_id = ?',
+            [id, schoolId]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Asignacion no encontrada' });
+        }
+        const a = rows[0];
+        await db.query('DELETE FROM asignacion_tutores WHERE id = ?', [a.id]);
+
+        // Quitar el tutor de las materias de ese curso
+        const [upd] = await db.query(
+            `UPDATE materias SET tutor_id = NULL
+             WHERE tutor_id = ? AND curso = ? AND paralelo = ? AND school_id = ? AND anio_lectivo = ?
+               AND IFNULL(especialidad, '') = IFNULL(?, '')`,
+            [a.tutor_id, a.curso, a.paralelo, schoolId, anio, a.especialidad || '']
+        );
+        res.json({ message: 'Tutor desasignado exitosamente', materias_actualizadas: upd.affectedRows });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
