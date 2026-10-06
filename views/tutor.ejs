@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutor - Gestion Academica</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/js/main.js" defer></script>
+</head>
+<body>
+    <div class="container-fluid vh-100 d-flex flex-column">
+        <header class="bg-purple text-white p-3 shadow" style="background:#7e57c2;">
+            <div class="container d-flex justify-content-between align-items-center">
+                <h1 class="h4 mb-0"><i class="fas fa-user-tie me-2"></i>Tutoria de Curso</h1>
+                <a href="/" class="btn btn-outline-light btn-sm"><i class="fas fa-home"></i> Menu</a>
+            </div>
+        </header>
+        <main class="flex-grow-1 overflow-auto py-3">
+            <div class="container">
+                <div class="card mb-3">
+                    <div class="card-header"><i class="fas fa-chalkboard me-1"></i>Mis Cursos como Tutor</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Seleccionar curso</label>
+                                <select class="form-select" id="selectCursoTutor" onchange="cargarEstudiantesTutor()">
+                                    <option value="">Seleccionar curso...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div id="infoCursoTutor" class="form-text fw-bold text-primary"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-user-graduate me-1"></i>Estudiantes del Curso (<span id="contadorTutor">0</span>)</span>
+                        <small class="text-muted">Solo puede editar datos personales, ubicacion y representante</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm table-hover">
+                                <thead class="table-dark text-center">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Matricula</th>
+                                        <th>Cedula</th>
+                                        <th>Nombres y Apellidos</th>
+                                        <th>Representante</th>
+                                        <th>Telefono Rep.</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoEstudiantesTutor">
+                                    <tr><td colspan="7" class="text-center text-muted">Seleccione un curso</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer class="bg-light text-center p-2 border-top">
+            <small class="text-muted">&copy; 2026 Sistema de Gestion Academica</small>
+        </footer>
+    </div>
+
+    <!-- Modal Editar Estudiante -->
+    <div class="modal fade" id="modalEstudianteTutor" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background:#7e57c2;color:#fff;">
+                    <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Editar Estudiante</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formEstudianteTutor" onsubmit="guardarEstudianteTutor(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="editTutorId">
+
+                        <!-- DATOS DE MATRICULA (SOLO LECTURA) -->
+                        <h6 class="text-secondary border-bottom pb-2 mb-3"><i class="fas fa-lock me-1"></i>Datos de Matricula (solo lectura)</h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">N° Matricula</label>
+                                <input type="text" class="form-control" id="infoMatricula" readonly disabled style="background:#e9ecef;">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Cedula</label>
+                                <input type="text" class="form-control" id="infoCedula" readonly disabled style="background:#e9ecef;">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label fw-bold">Año Lectivo</label>
+                                <input type="text" class="form-control" id="infoAnio" readonly disabled style="background:#e9ecef;">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label fw-bold">Curso</label>
+                                <input type="text" class="form-control" id="infoCurso" readonly disabled style="background:#e9ecef;">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label fw-bold">Paralelo</label>
+                                <input type="text" class="form-control" id="infoParalelo" readonly disabled style="background:#e9ecef;">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Especialidad</label>
+                            <input type="text" class="form-control" id="infoEspecialidad" readonly disabled style="background:#e9ecef;">
+                        </div>
+
+                        <!-- DATOS PERSONALES -->
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-id-card me-1"></i>Datos del Estudiante</h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nombres y Apellidos *</label>
+                            <input type="text" class="form-control" id="campoNombreTutor" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Fecha Nacimiento</label>
+                                <input type="date" class="form-control" id="campoFechaNacTutor" onchange="calcularEdadTutor()">
+                            </div>
+                            <div class="col-md-1 mb-3">
+                                <label class="form-label fw-bold">Edad</label>
+                                <input type="number" class="form-control" id="campoEdadTutor" readonly>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label fw-bold">Genero *</label>
+                                <select class="form-select" id="campoSexoTutor" required>
+                                    <option value="M">Masculino</option>
+                                    <option value="F">Femenino</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Correo Electronico</label>
+                                <input type="email" class="form-control" id="campoEmailTutor" placeholder="correo@ejemplo.com">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Tipo de Sangre</label>
+                                <select class="form-select" id="campoTipoSangreTutor">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Discapacidad</label>
+                                <select class="form-select" id="campoDiscapacidadTutor" onchange="toggleDiscapacidadTutor()">
+                                    <option value="NO">No</option>
+                                    <option value="SI">Si</option>
+                                </select>
+                            </div>
+                            <div class="col-md-9 mb-3" id="divDiscapacidadTipoTutor" style="display:none;">
+                                <label class="form-label fw-bold">Tipo de Discapacidad</label>
+                                <input type="text" class="form-control" id="campoDiscapacidadTipoTutor" placeholder="Ej: Visual, Auditiva, Motriz, Cognitive...">
+                            </div>
+                        </div>
+
+                        <!-- UBICACION -->
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-map-marker-alt me-1"></i>Datos de Ubicacion y Domicilio</h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Pais</label>
+                                <input type="text" class="form-control" id="campoPaisTutor" placeholder="Pais">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Provincia</label>
+                                <input type="text" class="form-control" id="campoProvinciaTutor" placeholder="Provincia">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Ciudad</label>
+                                <input type="text" class="form-control" id="campoCiudadTutor" placeholder="Ciudad">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Parroquia</label>
+                                <input type="text" class="form-control" id="campoParroquiaTutor" placeholder="Parroquia">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Direccion Exacta</label>
+                            <input type="text" class="form-control" id="campoDireccionTutor" placeholder="Direccion del domicilio actual">
+                        </div>
+
+                        <!-- REPRESENTANTE -->
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4"><i class="fas fa-user-tie me-1"></i>Datos del Representante Legal</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Nombres y Apellidos</label>
+                                <input type="text" class="form-control" id="campoRepresentanteTutor" placeholder="Nombre del representante">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Cedula del Representante</label>
+                                <input type="text" class="form-control" id="campoCedulaRepTutor" placeholder="Cedula">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Parentesco</label>
+                                <select class="form-select" id="campoParentescoRepTutor">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Padre">Padre</option>
+                                    <option value="Madre">Madre</option>
+                                    <option value="Abuelo/a">Abuelo/a</option>
+                                    <option value="Tío/a">Tío/a</option>
+                                    <option value="Hermano/a">Hermano/a</option>
+                                    <option value="Tutor Legal">Tutor Legal</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Telefono Celular</label>
+                                <input type="text" class="form-control" id="campoTelefonoRepTutor" placeholder="0999999999">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Correo del Representante</label>
+                                <input type="email" class="form-control" id="campoEmailRepTutor" placeholder="correo@ejemplo.com">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Lugar de Trabajo</label>
+                                <input type="text" class="form-control" id="campoTrabajoRepTutor" placeholder="Lugar de trabajo">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cursosTutor = [];
+        let estudiantesTutor = [];
+
+        document.addEventListener('DOMContentLoaded', cargarMisCursos);
+
+        async function cargarMisCursos() {
+            try {
+                const res = await fetch('/api/tutor/mis-cursos');
+                cursosTutor = await res.json();
+                const sel = document.getElementById('selectCursoTutor');
+                sel.innerHTML = '<option value="">Seleccionar curso...</option>';
+                cursosTutor.forEach((c, i) => {
+                    const esp = c.especialidad ? ` (${c.especialidad})` : '';
+                    sel.innerHTML += `<option value="${i}">${c.curso} ${c.paralelo}${esp}</option>`;
+                });
+                if (cursosTutor.length === 1) {
+                    sel.value = '0';
+                    cargarEstudiantesTutor();
+                }
+            } catch (err) {
+                showNotification('Error al cargar cursos', 'danger');
+            }
+        }
+
+        async function cargarEstudiantesTutor() {
+            const idx = document.getElementById('selectCursoTutor').value;
+            const tbody = document.getElementById('cuerpoEstudiantesTutor');
+            const info = document.getElementById('infoCursoTutor');
+            if (idx === '') {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Seleccione un curso</td></tr>';
+                document.getElementById('contadorTutor').textContent = '0';
+                info.textContent = '';
+                return;
+            }
+            const c = cursosTutor[parseInt(idx)];
+            try {
+                const params = new URLSearchParams({ curso: c.curso, paralelo: c.paralelo, especialidad: c.especialidad });
+                const res = await fetch(`/api/tutor/estudiantes?${params}`);
+                if (!res.ok) {
+                    const err = await res.json();
+                    showNotification(err.error || 'Error al cargar estudiantes', 'danger');
+                    return;
+                }
+                estudiantesTutor = await res.json();
+                info.textContent = `Curso: ${c.curso} ${c.paralelo}${c.especialidad ? ' - ' + c.especialidad : ''} · ${c.total_materias} materia(s)`;
+
+                document.getElementById('contadorTutor').textContent = estudiantesTutor.length;
+                if (estudiantesTutor.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No hay estudiantes en este curso</td></tr>';
+                    return;
+                }
+                let html = '';
+                estudiantesTutor.forEach((e, i) => {
+                    html += `
+                        <tr>
+                            <td class="text-center">${i + 1}</td>
+                            <td class="text-center"><small>${e.numero_matricula || '-'}</small></td>
+                            <td class="text-center"><small>${e.cedula}</small></td>
+                            <td><small>${e.nombres_apellidos}</small></td>
+                            <td><small>${e.representante || '-'}</small></td>
+                            <td class="text-center"><small>${e.telefono_representante || '-'}</small></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-warning" onclick="editarEstudianteTutor(${e.id})" title="Editar datos">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch (err) {
+                showNotification('Error al cargar estudiantes', 'danger');
+            }
+        }
+
+        function editarEstudianteTutor(id) {
+            const e = estudiantesTutor.find(x => x.id === id);
+            if (!e) return;
+
+            document.getElementById('editTutorId').value = e.id;
+            // Datos de matricula (solo lectura)
+            document.getElementById('infoMatricula').value = e.numero_matricula || '';
+            document.getElementById('infoCedula').value = e.cedula || '';
+            document.getElementById('infoAnio').value = e.anio_lectivo || '';
+            document.getElementById('infoCurso').value = e.curso || '';
+            document.getElementById('infoParalelo').value = e.paralelo || '';
+            document.getElementById('infoEspecialidad').value = e.especialidad || '';
+
+            // Datos editables
+            document.getElementById('campoNombreTutor').value = e.nombres_apellidos || '';
+            document.getElementById('campoFechaNacTutor').value = e.fecha_nacimiento ? String(e.fecha_nacimiento).split('T')[0] : '';
+            document.getElementById('campoEdadTutor').value = e.edad || '';
+            document.getElementById('campoSexoTutor').value = e.sexo || 'M';
+            document.getElementById('campoEmailTutor').value = e.email || '';
+            document.getElementById('campoTipoSangreTutor').value = e.tipo_sangre || '';
+            document.getElementById('campoDiscapacidadTutor').value = e.discapacidad || 'NO';
+            document.getElementById('campoDiscapacidadTipoTutor').value = e.discapacidad_tipo || '';
+            toggleDiscapacidadTutor();
+
+            document.getElementById('campoPaisTutor').value = e.pais || '';
+            document.getElementById('campoProvinciaTutor').value = e.provincia || '';
+            document.getElementById('campoCiudadTutor').value = e.ciudad || '';
+            document.getElementById('campoParroquiaTutor').value = e.parroquia || '';
+            document.getElementById('campoDireccionTutor').value = e.direccion || '';
+
+            document.getElementById('campoRepresentanteTutor').value = e.representante || '';
+            document.getElementById('campoCedulaRepTutor').value = e.cedula_representante || '';
+            document.getElementById('campoParentescoRepTutor').value = e.parentesco_representante || '';
+            document.getElementById('campoTelefonoRepTutor').value = e.telefono_representante || '';
+            document.getElementById('campoEmailRepTutor').value = e.email_representante || '';
+            document.getElementById('campoTrabajoRepTutor').value = e.lugar_trabajo_representante || '';
+
+            new bootstrap.Modal(document.getElementById('modalEstudianteTutor')).show();
+        }
+
+        function toggleDiscapacidadTutor() {
+            const si = document.getElementById('campoDiscapacidadTutor').value === 'SI';
+            document.getElementById('divDiscapacidadTipoTutor').style.display = si ? 'block' : 'none';
+        }
+
+        function calcularEdadTutor() {
+            const valor = document.getElementById('campoFechaNacTutor').value;
+            if (!valor) { document.getElementById('campoEdadTutor').value = ''; return; }
+            const hoy = new Date();
+            const nac = new Date(valor);
+            let edad = hoy.getFullYear() - nac.getFullYear();
+            const m = hoy.getMonth() - nac.getMonth();
+            if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+            document.getElementById('campoEdadTutor').value = edad;
+        }
+
+        async function guardarEstudianteTutor(e) {
+            e.preventDefault();
+            const id = document.getElementById('editTutorId').value;
+            if (!id) return;
+
+            const data = {
+                nombres_apellidos: document.getElementById('campoNombreTutor').value,
+                fecha_nacimiento: document.getElementById('campoFechaNacTutor').value,
+                sexo: document.getElementById('campoSexoTutor').value,
+                email: document.getElementById('campoEmailTutor').value,
+                tipo_sangre: document.getElementById('campoTipoSangreTutor').value,
+                discapacidad: document.getElementById('campoDiscapacidadTutor').value,
+                discapacidad_tipo: document.getElementById('campoDiscapacidadTipoTutor').value,
+                pais: document.getElementById('campoPaisTutor').value,
+                provincia: document.getElementById('campoProvinciaTutor').value,
+                ciudad: document.getElementById('campoCiudadTutor').value,
+                parroquia: document.getElementById('campoParroquiaTutor').value,
+                direccion: document.getElementById('campoDireccionTutor').value,
+                representante: document.getElementById('campoRepresentanteTutor').value,
+                cedula_representante: document.getElementById('campoCedulaRepTutor').value,
+                parentesco_representante: document.getElementById('campoParentescoRepTutor').value,
+                telefono_representante: document.getElementById('campoTelefonoRepTutor').value,
+                email_representante: document.getElementById('campoEmailRepTutor').value,
+                lugar_trabajo_representante: document.getElementById('campoTrabajoRepTutor').value
+            };
+
+            try {
+                const res = await fetch(`/api/tutor/estudiantes/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showNotification(result.message, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('modalEstudianteTutor')).hide();
+                    await cargarEstudiantesTutor();
+                } else {
+                    showNotification(result.error || 'Error', 'danger');
+                }
+            } catch (err) {
+                showNotification('Error de conexion', 'danger');
+            }
+        }
+    </script>
+</body>
+</html>

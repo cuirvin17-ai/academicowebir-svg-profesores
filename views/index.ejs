@@ -184,6 +184,9 @@
         .menu-btn.btn-recursos { border-left: 3px solid #26c6da; }
         .menu-btn.btn-recursos i { color: #4dd0e1; }
 
+        .menu-btn.btn-tutor { border-left: 3px solid #ab47bc; }
+        .menu-btn.btn-tutor i { color: #ce93d8; }
+
         .menu-btn.btn-salir { border-left: 3px solid #ef5350; background: rgba(239, 83, 80, 0.15); }
         .menu-btn.btn-salir i { color: #ef5350; }
         .menu-btn.btn-salir:hover { background: rgba(239, 83, 80, 0.3); }
@@ -273,6 +276,12 @@
                             <a href="/api/recursos/view" class="menu-btn btn-recursos">
                                 <i class="fas fa-book-open"></i>
                                 <span>Recursos</span>
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-4" id="btnTutorDocente" style="display:none;">
+                            <a href="/api/tutor/view" class="menu-btn btn-tutor">
+                                <i class="fas fa-user-tie"></i>
+                                <span>Tutor</span>
                             </a>
                         </div>
                         <% } %>
@@ -370,6 +379,19 @@
         const anioActual = '<%= user.anio_lectivo || "2026-2027" %>';
 
         document.addEventListener('DOMContentLoaded', cargarAnios);
+
+        // Mostrar boton Tutor solo si el docente es tutor de algun curso
+        document.addEventListener('DOMContentLoaded', async () => {
+            const btn = document.getElementById('btnTutorDocente');
+            if (!btn) return;
+            try {
+                const res = await fetch('/api/tutor/mis-cursos');
+                if (res.ok) {
+                    const cursos = await res.json();
+                    if (cursos.length > 0) btn.style.display = '';
+                }
+            } catch (err) { /* no es tutor */ }
+        });
 
         async function cargarAnios() {
             try {
