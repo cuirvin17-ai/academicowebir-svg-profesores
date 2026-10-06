@@ -177,4 +177,160 @@ router.put('/estudiantes/:id', async (req, res) => {
     }
 });
 
+// ========== FALTAS Y COMENTARIOS DE ASISTENCIA ==========
+
+// Faltas/atrasos de los estudiantes del curso en todas sus materias
+router.get('/faltas', async (req, res) => {
+    try {
+        const db = req.db;
+        const schoolId = req.session.user.school_id;
+        const { curso, paralelo, especialidad, desde, hasta, estado } = req.query;
+        if (!curso || !paralelo) return res.json([]);
+
+        const tutorId = await getTutorId(req);
+        if (!tutorId) return res.status(403).json({ error: 'No es tutor de ningun curso' });
+        if (!(await esCursoDelTutor(req, tutorId, curso, paralelo, especialidad))) {
+            return res.status(403).json({ error: 'Este curso no le pertenece como tutor' });
+        }
+
+        const esp = (especialidad || '').trim();
+        let sql = `
+            SELECT a.id, a.fecha, a.estado, a.comentario,
+                   e.id AS estudiante_id, e.nombres_apellidos, e.cedula,
+                   m.nombre_materia, IFNULL(u.nombre, 'Sin docente') AS docente
+            FROM asistencias a
+            INNER JOIN grupos g ON a.grupo_id = g.id
+            INNER JOIN materias m ON g.materia_id = m.id
+            INNER JOIN estudiantes e ON g.estudiante_id = e.id
+            LEFT JOIN usuarios u ON m.docente_id = u.id
+            WHERE g.school_id = ? AND m.curso = ? AND m.paralelo = ?
+              AND IFNULL(m.especialidad, '') = IFNULL(?, '')
+        `;
+        const params = [schoolId, curso, paralelo, esp];
+
+        if (estado === 'ausente' || estado === 'atraso') {
+            sql += ' AND a.estado = ?';
+            params.push(estado);
+        } else {
+            sql += " AND a.estado IN ('ausente', 'atraso')";
+        }
+        if (desde) { sql += ' AND a.fecha >= ?'; params.push(desde); }
+        if (hasta) { sql += ' AND a.fecha <= ?'; params.push(hasta); }
+        sql += ' ORDER BY a.fecha DESC, e.nombres_apellidos';
+
+        const [rows] = await db.query(sql, params);
+        res.json(rows);
+    } catch (err) {
+        console.error('Error al listar faltas:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ========== HISTORIAL DE COMPORTAMIENTO ==========
+
+// Registros de comportamiento de los estudiantes del curso
+router.get('/comportamiento', async (req, res) => {
+    try {
+        const db = req.db;
+        const schoolId = req.session.user.school_id;
+        const { curso, paralelo, especialidad } = req.query;
+        if (!curso || !paralelo) return res.json([]);
+
+        const tutorId = await getTutorId(req);
+        if (!tutorId) return res.status(403).json({ error: 'No es tutor de ningun curso' });
+        if (!(await esCursoDelTutor(req, tutorId, curso, paralelo, especialidad))) {
+            return res.status(403).json({ error: 'Este curso no le pertenece como tutor' });
+        }
+
+        const esp = (especialidad || '').trim();
+        const [rows] = await db.query(
+            `SELECT hc.id, hc.fecha, hc.tipo, hc.descripcion, hc.created_at,
+                    e.id AS estudiante_id, e.nombres_apellidos, e.cedula,
+                    u.nombre AS registrado_por
+             FROM historial_comportamiento hc
+             INNER JOIN estudiantes e ON hc.estudiante_id = e.id
+             LEFT JOIN usuarios u ON hc.usuario_id = u.id
+             WHERE hc.school_id = ? AND e.curso = ? AND e.paralelo = ?
+               AND IFNULL(e.especialidad, '') = IFNULL(?, '')
+             ORDER BY hc.fecha DESC, hc.id DESC`,
+            [schoolId, curso, paralelo, esp]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Error al listar comportamiento:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Registrar un nuevo comportamiento
+router.post('/comportamiento', async (req, res) => {
+    try {
+        const db = req.db;
+        const user = req.session.user;
+        const { estudiante_id, fecha, tipo, descripcion } = req.body;
+
+        if (!estudiante_id || !fecha || !descripcion || !descripcion.trim()) {
+            return res.status(400).json({ error: 'Estudiante, fecha y descripcion son requeridos' });
+        }
+        const tipoValido = ['observacion', 'positivo', 'negativo'].includes(tipo) ? tipo : 'observacion';
+
+        const tutorId = await getTutorId(req);
+        if (!tutorId) return res.status(403).json({ error: 'No es tutor de ningun curso' });
+
+        const [estRows] = await db.query(
+            'SELECT id, curso, paralelo, especialidad FROM estudiantes WHERE id = ? AND school_id = ?',
+            [estudiante_id, user.school_id]
+        );
+        if (estRows.length === 0) return res.status(404).json({ error: 'Estudiante no encontrado' });
+        const est = estRows[0];
+
+        if (!(await esCursoDelTutor(req, tutorId, est.curso, est.paralelo, est.especialidad))) {
+            return res.status(403).json({ error: 'Este estudiante no pertenece a su curso' });
+        }
+
+        await db.query(
+            `INSERT INTO historial_comportamiento
+                (estudiante_id, tutor_id, usuario_id, fecha, tipo, descripcion, school_id, anio_lectivo)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [estudiante_id, tutorId, user.id, fecha, tipoValido, descripcion.trim(), user.school_id, user.anio_lectivo || '2026-2027']
+        );
+        res.json({ message: 'Registro de comportamiento guardado' });
+    } catch (err) {
+        console.error('Error al registrar comportamiento:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Eliminar un registro de comportamiento
+router.delete('/comportamiento/:id', async (req, res) => {
+    try {
+        const db = req.db;
+        const user = req.session.user;
+        const { id } = req.params;
+
+        const tutorId = await getTutorId(req);
+        if (!tutorId) return res.status(403).json({ error: 'No es tutor de ningun curso' });
+
+        const [rows] = await db.query(
+            `SELECT hc.id, hc.estudiante_id, e.curso, e.paralelo, e.especialidad
+             FROM historial_comportamiento hc
+             INNER JOIN estudiantes e ON hc.estudiante_id = e.id
+             WHERE hc.id = ? AND hc.school_id = ?`,
+            [id, user.school_id]
+        );
+        if (rows.length === 0) return res.status(404).json({ error: 'Registro no encontrado' });
+        const reg = rows[0];
+
+        if (!(await esCursoDelTutor(req, tutorId, reg.curso, reg.paralelo, reg.especialidad))) {
+            return res.status(403).json({ error: 'Este registro no pertenece a su curso' });
+        }
+
+        await db.query('DELETE FROM historial_comportamiento WHERE id = ?', [id]);
+        res.json({ message: 'Registro eliminado' });
+    } catch (err) {
+        console.error('Error al eliminar comportamiento:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

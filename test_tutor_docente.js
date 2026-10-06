@@ -33,9 +33,13 @@ async function login(cedula, password) {
     const [m] = await db.query('SELECT COUNT(*) n FROM materias');
     const [g] = await db.query('SELECT COUNT(*) n FROM grupos');
     const [no] = await db.query('SELECT COUNT(*) n FROM notas');
-    return `estudiantes=${e[0].n} materias=${m[0].n} grupos=${g[0].n} notas=${no[0].n}`;
+    const [as] = await db.query('SELECT COUNT(*) n FROM asistencias');
+    const [co] = await db.query('SELECT COUNT(*) n FROM historial_comportamiento');
+    return `estudiantes=${e[0].n} materias=${m[0].n} grupos=${g[0].n} notas=${no[0].n} asistencias=${as[0].n} comportamiento=${co[0].n}`;
   };
   const limpiar = async () => {
+    await db.query("DELETE FROM historial_comportamiento WHERE estudiante_id IN (SELECT id FROM estudiantes WHERE cedula='9999999992')");
+    await db.query("DELETE FROM asistencias WHERE grupo_id IN (SELECT id FROM grupos WHERE materia_id IN (SELECT id FROM materias WHERE nombre_materia LIKE 'ZZ Test Tutor%'))");
     await db.query("DELETE FROM grupos WHERE materia_id IN (SELECT id FROM materias WHERE nombre_materia LIKE 'ZZ Test Tutor%')");
     await db.query("DELETE FROM materias WHERE nombre_materia LIKE 'ZZ Test Tutor%'");
     await db.query("DELETE FROM estudiantes WHERE cedula='9999999992'");
@@ -96,15 +100,56 @@ async function login(cedula, password) {
   // 3) Vista del tutor
   const vista = await req({ method: 'GET', path: '/api/tutor/view', headers: { Cookie: ckDoc } });
   console.log('vista /view:', vista.status);
-  ['formEstudianteTutor', 'infoCedula', 'infoMatricula', 'campoRepresentanteTutor', 'campoDireccionTutor'].forEach(s =>
+  ['formEstudianteTutor', 'infoCedula', 'infoMatricula', 'campoRepresentanteTutor', 'campoDireccionTutor',
+   'tabFaltas', 'tabComportamiento', 'cuerpoFaltasTutor', 'cuerpoComportamientoTutor', 'registrarComportamiento'].forEach(s =>
     console.log('  ', s, vista.body.includes(s) ? 'OK' : 'FALTA'));
   if (vista.status !== 200) throw new Error('Fallo vista tutor');
 
-  // 4) Menu docente tiene el boton (oculto, JS lo muestra)
+  // 4) FALTAS: crear un grupo + asistencia de prueba para el estudiante
+  const [mat] = await db.query("SELECT id FROM materias WHERE nombre_materia='ZZ Test Tutor 1'");
+  const [grp] = await db.query('INSERT INTO grupos (nombre_grupo, materia_id, estudiante_id, school_id, anio_lectivo) VALUES (?,?,?,?,?)',
+    ['ZZ Test Tutor 1 - ZZTEST A', mat[0].id, sid, 1, '2026-2027']);
+  await db.query('INSERT INTO asistencias (grupo_id, fecha, estado, comentario, anio_lectivo) VALUES (?,?,?,?,?)',
+    [grp.insertId, '2026-09-01', 'ausente', 'Llego tarde y falto todo el dia', '2026-2027']);
+
+  r = await json({ method: 'GET', path: '/api/tutor/faltas?curso=ZZTEST&paralelo=A&especialidad=', headers: { Cookie: ckDoc } });
+  console.log('faltas:', r.status, '| total:', r.json.length, JSON.stringify(r.json[0] || null));
+  if (r.status !== 200 || r.json.length !== 1) throw new Error('Fallo faltas');
+  if (r.json[0].comentario !== 'Llego tarde y falto todo el dia') throw new Error('Falta el comentario');
+  if (r.json[0].estado !== 'ausente') throw new Error('Mal estado');
+
+  r = await json({ method: 'GET', path: '/api/tutor/faltas?curso=Primero&paralelo=A&especialidad=Electromecanica', headers: { Cookie: ckDoc } });
+  if (r.status !== 403) throw new Error('Faltas de curso ajeno debio ser 403');
+  console.log('faltas curso ajeno: 403 OK');
+
+  // 5) COMPORTAMIENTO: registrar, listar, borrar
+  r = await json({ method: 'POST', path: '/api/tutor/comportamiento', headers: { Cookie: ckDoc, 'Content-Type': 'application/json' } },
+    JSON.stringify({ estudiante_id: sid, fecha: '2026-09-10', tipo: 'negativo', descripcion: 'Interrumpio la clase varias veces' }));
+  console.log('POST comportamiento:', r.status, JSON.stringify(r.json));
+  if (r.status !== 200) throw new Error('Fallo POST comportamiento');
+
+  const [realEst] = await db.query("SELECT id FROM estudiantes WHERE id = ?", [realId]);
+  r = await json({ method: 'POST', path: '/api/tutor/comportamiento', headers: { Cookie: ckDoc, 'Content-Type': 'application/json' } },
+    JSON.stringify({ estudiante_id: realEst[0].id, fecha: '2026-09-10', tipo: 'positivo', descripcion: 'No deberia poder' }));
+  console.log('POST comportamiento estudiante ajeno:', r.status, '(esperado 403)');
+  if (r.status !== 403) throw new Error('Debio ser 403 estudiante ajeno');
+
+  r = await json({ method: 'GET', path: '/api/tutor/comportamiento?curso=ZZTEST&paralelo=A&especialidad=', headers: { Cookie: ckDoc } });
+  console.log('GET comportamiento:', r.status, '| total:', r.json.length, '| tipo:', r.json[0] && r.json[0].tipo, '| por:', r.json[0] && r.json[0].registrado_por);
+  if (r.status !== 200 || r.json.length !== 1 || r.json[0].tipo !== 'negativo') throw new Error('Fallo GET comportamiento');
+
+  const compId = r.json[0].id;
+  r = await json({ method: 'DELETE', path: `/api/tutor/comportamiento/${compId}`, headers: { Cookie: ckDoc } });
+  console.log('DELETE comportamiento:', r.status, JSON.stringify(r.json));
+  if (r.status !== 200) throw new Error('Fallo DELETE comportamiento');
+  const [compCount] = await db.query('SELECT COUNT(*) n FROM historial_comportamiento');
+  if (compCount[0].n !== 0) throw new Error('No se borro el registro');
+
+  // 6) Menu docente tiene el boton (oculto, JS lo muestra)
   const menu = await req({ method: 'GET', path: '/', headers: { Cookie: ckDoc } });
   console.log('menu docente btnTutorDocente:', menu.body.includes('btnTutorDocente') ? 'OK' : 'FALTA');
 
-  // 5) Rector no puede usar /api/tutor
+  // 7) Rector no puede usar /api/tutor
   const ckRec = await login('1400501070', 'rector123');
   r = await json({ method: 'GET', path: '/api/tutor/mis-cursos', headers: { Cookie: ckRec } });
   console.log('rector en /api/tutor:', r.status, '(esperado 403)');

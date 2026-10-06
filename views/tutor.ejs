@@ -26,7 +26,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Seleccionar curso</label>
-                                <select class="form-select" id="selectCursoTutor" onchange="cargarEstudiantesTutor()">
+                                <select class="form-select" id="selectCursoTutor" onchange="cambiarCursoTutor()">
                                     <option value="">Seleccionar curso...</option>
                                 </select>
                             </div>
@@ -37,29 +37,155 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-user-graduate me-1"></i>Estudiantes del Curso (<span id="contadorTutor">0</span>)</span>
-                        <small class="text-muted">Solo puede editar datos personales, ubicacion y representante</small>
+                <ul class="nav nav-tabs mb-3" id="tabsTutor">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#tabEstudiantes"><i class="fas fa-user-graduate me-1"></i>Estudiantes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tabFaltas" onclick="cargarFaltasTutor()"><i class="fas fa-user-slash me-1"></i>Faltas y Comentarios</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tabComportamiento" onclick="cargarComportamientoTutor()"><i class="fas fa-clipboard-list me-1"></i>Comportamiento</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- PESTAÑA: ESTUDIANTES -->
+                    <div class="tab-pane fade show active" id="tabEstudiantes">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-user-graduate me-1"></i>Estudiantes del Curso (<span id="contadorTutor">0</span>)</span>
+                                <small class="text-muted">Solo puede editar datos personales, ubicacion y representante</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm table-hover">
+                                        <thead class="table-dark text-center">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Matricula</th>
+                                                <th>Cedula</th>
+                                                <th>Nombres y Apellidos</th>
+                                                <th>Representante</th>
+                                                <th>Telefono Rep.</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cuerpoEstudiantesTutor">
+                                            <tr><td colspan="7" class="text-center text-muted">Seleccione un curso</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-sm table-hover">
-                                <thead class="table-dark text-center">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Matricula</th>
-                                        <th>Cedula</th>
-                                        <th>Nombres y Apellidos</th>
-                                        <th>Representante</th>
-                                        <th>Telefono Rep.</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cuerpoEstudiantesTutor">
-                                    <tr><td colspan="7" class="text-center text-muted">Seleccione un curso</td></tr>
-                                </tbody>
-                            </table>
+
+                    <!-- PESTAÑA: FALTAS Y COMENTARIOS -->
+                    <div class="tab-pane fade" id="tabFaltas">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-user-slash me-1"></i>Faltas y Atrasos en todas las materias</span>
+                                <button class="btn btn-sm btn-outline-primary" onclick="cargarFaltasTutor()"><i class="fas fa-sync me-1"></i>Actualizar</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold mb-1">Desde</label>
+                                        <input type="date" class="form-control form-control-sm" id="faltaDesde" onchange="cargarFaltasTutor()">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold mb-1">Hasta</label>
+                                        <input type="date" class="form-control form-control-sm" id="faltaHasta" onchange="cargarFaltasTutor()">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold mb-1">Tipo</label>
+                                        <select class="form-select form-select-sm" id="faltaEstado" onchange="cargarFaltasTutor()">
+                                            <option value="">Faltas y atrasos</option>
+                                            <option value="ausente">Solo faltas</option>
+                                            <option value="atraso">Solo atrasos</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <div id="resumenFaltas" class="form-text fw-bold"></div>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm table-hover">
+                                        <thead class="table-dark text-center">
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Estudiante</th>
+                                                <th>Materia</th>
+                                                <th>Estado</th>
+                                                <th>Comentario del docente</th>
+                                                <th>Docente</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cuerpoFaltasTutor">
+                                            <tr><td colspan="6" class="text-center text-muted">Seleccione un curso</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PESTAÑA: COMPORTAMIENTO -->
+                    <div class="tab-pane fade" id="tabComportamiento">
+                        <div class="card mb-3">
+                            <div class="card-header"><i class="fas fa-plus-circle me-1"></i>Registrar Comportamiento</div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold mb-1">Estudiante *</label>
+                                        <select class="form-select form-select-sm" id="compEstudiante">
+                                            <option value="">Seleccionar estudiante...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold mb-1">Fecha *</label>
+                                        <input type="date" class="form-control form-control-sm" id="compFecha">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-bold mb-1">Tipo</label>
+                                        <select class="form-select form-select-sm" id="compTipo">
+                                            <option value="observacion">Observacion</option>
+                                            <option value="positivo">Positivo</option>
+                                            <option value="negativo">Negativo</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold mb-1">Descripcion *</label>
+                                        <input type="text" class="form-control form-control-sm" id="compDescripcion" placeholder="Detalle del comportamiento">
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-sm mt-3" onclick="registrarComportamiento()"><i class="fas fa-save me-1"></i>Guardar Registro</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-history me-1"></i>Historial de Comportamiento</span>
+                                <button class="btn btn-sm btn-outline-primary" onclick="cargarComportamientoTutor()"><i class="fas fa-sync me-1"></i>Actualizar</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm table-hover">
+                                        <thead class="table-dark text-center">
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Estudiante</th>
+                                                <th>Tipo</th>
+                                                <th>Descripcion</th>
+                                                <th>Registrado por</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cuerpoComportamientoTutor">
+                                            <tr><td colspan="6" class="text-center text-muted">Seleccione un curso</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -244,7 +370,15 @@
         let cursosTutor = [];
         let estudiantesTutor = [];
 
-        document.addEventListener('DOMContentLoaded', cargarMisCursos);
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarMisCursos();
+            document.getElementById('compFecha').value = new Date().toISOString().split('T')[0];
+        });
+
+        function cursoActual() {
+            const idx = document.getElementById('selectCursoTutor').value;
+            return idx === '' ? null : cursosTutor[parseInt(idx)];
+        }
 
         async function cargarMisCursos() {
             try {
@@ -258,24 +392,34 @@
                 });
                 if (cursosTutor.length === 1) {
                     sel.value = '0';
-                    cargarEstudiantesTutor();
+                    cambiarCursoTutor();
                 }
             } catch (err) {
                 showNotification('Error al cargar cursos', 'danger');
             }
         }
 
+        function cambiarCursoTutor() {
+            cargarEstudiantesTutor();
+            poblarSelectEstudiantesComportamiento();
+            document.getElementById('cuerpoFaltasTutor').innerHTML = '<tr><td colspan="6" class="text-center text-muted">Cargando...</td></tr>';
+            document.getElementById('resumenFaltas').textContent = '';
+            cargarFaltasTutor();
+            cargarComportamientoTutor();
+        }
+
+        // ========== PESTAÑA ESTUDIANTES ==========
         async function cargarEstudiantesTutor() {
-            const idx = document.getElementById('selectCursoTutor').value;
+            const c = cursoActual();
             const tbody = document.getElementById('cuerpoEstudiantesTutor');
             const info = document.getElementById('infoCursoTutor');
-            if (idx === '') {
+            if (!c) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Seleccione un curso</td></tr>';
                 document.getElementById('contadorTutor').textContent = '0';
                 info.textContent = '';
+                estudiantesTutor = [];
                 return;
             }
-            const c = cursosTutor[parseInt(idx)];
             try {
                 const params = new URLSearchParams({ curso: c.curso, paralelo: c.paralelo, especialidad: c.especialidad });
                 const res = await fetch(`/api/tutor/estudiantes?${params}`);
@@ -320,7 +464,6 @@
             if (!e) return;
 
             document.getElementById('editTutorId').value = e.id;
-            // Datos de matricula (solo lectura)
             document.getElementById('infoMatricula').value = e.numero_matricula || '';
             document.getElementById('infoCedula').value = e.cedula || '';
             document.getElementById('infoAnio').value = e.anio_lectivo || '';
@@ -328,7 +471,6 @@
             document.getElementById('infoParalelo').value = e.paralelo || '';
             document.getElementById('infoEspecialidad').value = e.especialidad || '';
 
-            // Datos editables
             document.getElementById('campoNombreTutor').value = e.nombres_apellidos || '';
             document.getElementById('campoFechaNacTutor').value = e.fecha_nacimiento ? String(e.fecha_nacimiento).split('T')[0] : '';
             document.getElementById('campoEdadTutor').value = e.edad || '';
@@ -408,6 +550,166 @@
                     showNotification(result.message, 'success');
                     bootstrap.Modal.getInstance(document.getElementById('modalEstudianteTutor')).hide();
                     await cargarEstudiantesTutor();
+                    poblarSelectEstudiantesComportamiento();
+                } else {
+                    showNotification(result.error || 'Error', 'danger');
+                }
+            } catch (err) {
+                showNotification('Error de conexion', 'danger');
+            }
+        }
+
+        // ========== PESTAÑA FALTAS ==========
+        async function cargarFaltasTutor() {
+            const c = cursoActual();
+            const tbody = document.getElementById('cuerpoFaltasTutor');
+            const resumen = document.getElementById('resumenFaltas');
+            if (!c) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Seleccione un curso</td></tr>';
+                resumen.textContent = '';
+                return;
+            }
+            const params = new URLSearchParams({
+                curso: c.curso, paralelo: c.paralelo, especialidad: c.especialidad,
+                desde: document.getElementById('faltaDesde').value,
+                hasta: document.getElementById('faltaHasta').value,
+                estado: document.getElementById('faltaEstado').value
+            });
+            try {
+                const res = await fetch(`/api/tutor/faltas?${params}`);
+                if (!res.ok) {
+                    const err = await res.json();
+                    showNotification(err.error || 'Error al cargar faltas', 'danger');
+                    return;
+                }
+                const faltas = await res.json();
+                const nAusente = faltas.filter(f => f.estado === 'ausente').length;
+                const nAtraso = faltas.filter(f => f.estado === 'atraso').length;
+                resumen.innerHTML = `<span class="text-danger">${nAusente} falta(s)</span> · <span class="text-warning">${nAtraso} atraso(s)</span>`;
+
+                if (faltas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-success">No hay faltas ni atrasos registrados</td></tr>';
+                    return;
+                }
+                let html = '';
+                faltas.forEach(f => {
+                    const fecha = String(f.fecha).split('T')[0];
+                    const badge = f.estado === 'ausente'
+                        ? '<span class="badge bg-danger">Falta</span>'
+                        : '<span class="badge bg-warning text-dark">Atraso</span>';
+                    html += `
+                        <tr>
+                            <td class="text-center"><small>${fecha}</small></td>
+                            <td><small>${f.nombres_apellidos}</small></td>
+                            <td><small>${f.nombre_materia}</small></td>
+                            <td class="text-center">${badge}</td>
+                            <td><small>${f.comentario ? f.comentario : '<span class="text-muted">Sin comentario</span>'}</small></td>
+                            <td><small>${f.docente}</small></td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch (err) {
+                showNotification('Error al cargar faltas', 'danger');
+            }
+        }
+
+        // ========== PESTAÑA COMPORTAMIENTO ==========
+        function poblarSelectEstudiantesComportamiento() {
+            const sel = document.getElementById('compEstudiante');
+            const actual = sel.value;
+            sel.innerHTML = '<option value="">Seleccionar estudiante...</option>';
+            estudiantesTutor.forEach(e => {
+                sel.innerHTML += `<option value="${e.id}">${e.nombres_apellidos} (${e.cedula})</option>`;
+            });
+            if (estudiantesTutor.some(e => e.id == actual)) sel.value = actual;
+        }
+
+        async function cargarComportamientoTutor() {
+            const c = cursoActual();
+            const tbody = document.getElementById('cuerpoComportamientoTutor');
+            if (!c) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Seleccione un curso</td></tr>';
+                return;
+            }
+            const params = new URLSearchParams({ curso: c.curso, paralelo: c.paralelo, especialidad: c.especialidad });
+            try {
+                const res = await fetch(`/api/tutor/comportamiento?${params}`);
+                if (!res.ok) {
+                    const err = await res.json();
+                    showNotification(err.error || 'Error al cargar historial', 'danger');
+                    return;
+                }
+                const registros = await res.json();
+                if (registros.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay registros de comportamiento</td></tr>';
+                    return;
+                }
+                let html = '';
+                registros.forEach(r => {
+                    const fecha = String(r.fecha).split('T')[0];
+                    let badge;
+                    if (r.tipo === 'positivo') badge = '<span class="badge bg-success">Positivo</span>';
+                    else if (r.tipo === 'negativo') badge = '<span class="badge bg-danger">Negativo</span>';
+                    else badge = '<span class="badge bg-info text-dark">Observacion</span>';
+                    html += `
+                        <tr>
+                            <td class="text-center"><small>${fecha}</small></td>
+                            <td><small>${r.nombres_apellidos}</small></td>
+                            <td class="text-center">${badge}</td>
+                            <td><small>${r.descripcion}</small></td>
+                            <td><small>${r.registrado_por || '-'}</small></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-danger" onclick="eliminarComportamiento(${r.id})" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch (err) {
+                showNotification('Error al cargar historial', 'danger');
+            }
+        }
+
+        async function registrarComportamiento() {
+            const c = cursoActual();
+            if (!c) { showNotification('Seleccione un curso', 'warning'); return; }
+            const estudiante_id = document.getElementById('compEstudiante').value;
+            const fecha = document.getElementById('compFecha').value;
+            const tipo = document.getElementById('compTipo').value;
+            const descripcion = document.getElementById('compDescripcion').value.trim();
+            if (!estudiante_id || !fecha || !descripcion) {
+                showNotification('Estudiante, fecha y descripcion son requeridos', 'warning');
+                return;
+            }
+            try {
+                const res = await fetch('/api/tutor/comportamiento', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estudiante_id: parseInt(estudiante_id), fecha, tipo, descripcion })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showNotification(result.message, 'success');
+                    document.getElementById('compDescripcion').value = '';
+                    document.getElementById('compFecha').value = new Date().toISOString().split('T')[0];
+                    await cargarComportamientoTutor();
+                } else {
+                    showNotification(result.error || 'Error', 'danger');
+                }
+            } catch (err) {
+                showNotification('Error de conexion', 'danger');
+            }
+        }
+
+        async function eliminarComportamiento(id) {
+            if (!confirm('Eliminar este registro de comportamiento?')) return;
+            try {
+                const res = await fetch(`/api/tutor/comportamiento/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (res.ok) {
+                    showNotification(result.message, 'success');
+                    await cargarComportamientoTutor();
                 } else {
                     showNotification(result.error || 'Error', 'danger');
                 }
