@@ -535,15 +535,19 @@ async function cargarTablaNotas() {
         }));
 
         // Detectar tareas existentes en BD y mezclar con nombres guardados
+        // (revisar TODOS los estudiantes, no solo el primero)
         if (tareasCount === 0) {
-            const primerEst = estudiantes[0]?.id;
-            if (primerEst && notasExistentes[primerEst]) {
-                const tareasBD = notasExistentes[primerEst].filter(n => n.tipo === 'tarea');
-                if (tareasBD.length > 0) {
-                    const maxIndice = Math.max(...tareasBD.map(t => t.indice || 0));
-                    tareasCount = maxIndice + 1;
+            let maxIndice = -1;
+            for (const est of estudiantes) {
+                const nt = notasExistentes[est.id] || [];
+                for (const n of nt) {
+                    if (n.tipo === 'tarea') {
+                        const idx = n.indice || 0;
+                        if (idx > maxIndice) maxIndice = idx;
+                    }
                 }
             }
+            if (maxIndice >= 0) tareasCount = maxIndice + 1;
         }
         
         // Cargar nombres de tareas desde localStorage
