@@ -202,14 +202,16 @@ router.get('/materias/:id/estudiantes-disponibles', async (req, res) => {
 
         const [rows] = await db.query(`
             SELECT e.* FROM estudiantes e
-            WHERE e.school_id = ? AND e.activo = 1
+            WHERE e.school_id = ? AND e.activo = 1 AND e.anio_lectivo = ?
             AND e.id NOT IN (
                 SELECT g.estudiante_id FROM grupos g WHERE g.materia_id = ?
             )
             AND e.curso = ? AND e.paralelo = ?
             ${mat.especialidad ? 'AND e.especialidad = ?' : ''}
             ORDER BY e.nombres_apellidos
-        `, mat.especialidad ? [schoolId, id, mat.curso, mat.paralelo, mat.especialidad] : [schoolId, id, mat.curso, mat.paralelo]);
+        `, mat.especialidad
+            ? [schoolId, req.session.user.anio_lectivo || '2026-2027', id, mat.curso, mat.paralelo, mat.especialidad]
+            : [schoolId, req.session.user.anio_lectivo || '2026-2027', id, mat.curso, mat.paralelo]);
         res.json(rows);
     } catch (err) {
         console.error('Error al listar disponibles:', err);
@@ -227,9 +229,9 @@ router.get('/materias/:id/estudiantes-asignados', async (req, res) => {
         const [rows] = await db.query(`
             SELECT e.*, g.id AS grupo_id FROM estudiantes e
             INNER JOIN grupos g ON e.id = g.estudiante_id
-            WHERE g.materia_id = ? AND e.school_id = ?
+            WHERE g.materia_id = ? AND e.school_id = ? AND e.anio_lectivo = ?
             ORDER BY e.nombres_apellidos
-        `, [id, schoolId]);
+        `, [id, schoolId, req.session.user.anio_lectivo || '2026-2027']);
         res.json(rows);
     } catch (err) {
         console.error('Error al listar asignados:', err);
@@ -296,12 +298,13 @@ router.get('/asignacion-curso', async (req, res) => {
         const { curso, paralelo, especialidad } = req.query;
         if (!curso || !paralelo) return res.json({ materias: [], alumnos: [], total_materias: 0 });
         const esp = (especialidad || '').trim();
+        const anio = req.session.user.anio_lectivo || '2026-2027';
 
         const [materias] = await db.query(
             `SELECT id, nombre_materia FROM materias
-             WHERE school_id = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')
+             WHERE school_id = ? AND anio_lectivo = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')
              ORDER BY nombre_materia`,
-            [schoolId, curso, paralelo, esp]
+            [schoolId, anio, curso, paralelo, esp]
         );
         if (materias.length === 0) return res.json({ materias: [], alumnos: [], total_materias: 0 });
 
@@ -312,12 +315,12 @@ router.get('/asignacion-curso', async (req, res) => {
                     WHERE g.estudiante_id = e.id AND g.materia_id IN (${placeholders})
                    ) AS materias_asignadas
             FROM estudiantes e
-            WHERE e.school_id = ? AND e.activo = 1 AND e.curso = ? AND e.paralelo = ?
+            WHERE e.school_id = ? AND e.activo = 1 AND e.anio_lectivo = ? AND e.curso = ? AND e.paralelo = ?
               ${esp ? 'AND e.especialidad = ?' : ''}
             ORDER BY e.nombres_apellidos
         `, esp
-            ? [...materias.map(m => m.id), schoolId, curso, paralelo, esp]
-            : [...materias.map(m => m.id), schoolId, curso, paralelo]);
+            ? [...materias.map(m => m.id), schoolId, anio, curso, paralelo, esp]
+            : [...materias.map(m => m.id), schoolId, anio, curso, paralelo]);
 
         res.json({ materias, alumnos, total_materias: materias.length });
     } catch (err) {
@@ -339,8 +342,8 @@ router.post('/asignacion-curso', async (req, res) => {
 
         const [materias] = await db.query(
             `SELECT id, nombre_materia FROM materias
-             WHERE school_id = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')`,
-            [schoolId, curso, paralelo, esp]
+             WHERE school_id = ? AND anio_lectivo = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')`,
+            [schoolId, req.session.user.anio_lectivo || '2026-2027', curso, paralelo, esp]
         );
         if (materias.length === 0) {
             return res.status(400).json({ error: 'No hay materias registradas para ese curso' });
@@ -384,8 +387,8 @@ router.delete('/asignacion-curso', async (req, res) => {
 
         const [materias] = await db.query(
             `SELECT id FROM materias
-             WHERE school_id = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')`,
-            [schoolId, curso, paralelo, esp]
+             WHERE school_id = ? AND anio_lectivo = ? AND curso = ? AND paralelo = ? AND IFNULL(especialidad, '') = IFNULL(?, '')`,
+            [schoolId, req.session.user.anio_lectivo || '2026-2027', curso, paralelo, esp]
         );
         if (materias.length === 0) return res.json({ message: 'No hay materias para ese curso', registros: 0 });
 
