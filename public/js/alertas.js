@@ -57,7 +57,7 @@ function enviarWhatsAppTutor(tipo) {
         const msg = encodeURIComponent(`Estimado/a Tutor ${tutorNom}, le informamos que en la materia ${materia} del curso ${curso} se han detectado ${datos.length} caso(s) de inasistencia:%0A${detalle}%0AAtentamente, ${profesor}.`);
         window.open(`https://wa.me/593${tutorTel.replace(/[^0-9]/g, '')}?text=${msg}`, '_blank');
     } else {
-        detalle = datos.map(d => `- ${d.nombres_apellidos}: Nota Final ${d.nota_final}`).join('%0A');
+        detalle = datos.map(d => `- ${d.nombres_apellidos}: Promedio de Tareas ${d.prom_tareas}`).join('%0A');
         const msg = encodeURIComponent(`Estimado/a Tutor ${tutorNom}, le informamos que en la materia ${materia} del curso ${curso} se han detectado ${datos.length} caso(s) de bajo rendimiento:%0A${detalle}%0AAtentamente, ${profesor}.`);
         window.open(`https://wa.me/593${tutorTel.replace(/[^0-9]/g, '')}?text=${msg}`, '_blank');
     }
@@ -207,13 +207,18 @@ async function cargarRendimiento(grupoId) {
         const tbody = document.getElementById('tbodyRendimiento');
         tbody.innerHTML = '';
         const btnTutor = document.getElementById('btnTutorRendimiento');
+        const ref = document.getElementById('referenciaRendimiento');
+        if (ref) {
+            ref.innerHTML = `Referencia: <strong>Promedio de Tareas</strong> de la clase = <strong>${data.promedio_clase || '0.00'}</strong>` +
+                (data.promedio_clase_final !== undefined ? ` &nbsp;|&nbsp; Promedio Final de la clase = ${data.promedio_clase_final}` : '');
+        }
         if (!data.estudiantes || data.estudiantes.length === 0) {
             datosRendimientoActual = [];
             tbody.innerHTML = '<tr><td colspan="10" class="text-center text-success">No hay alertas de bajo rendimiento</td></tr>';
             if (btnTutor) btnTutor.style.display = 'none';
             return;
         }
-        const filtrados = data.estudiantes.filter(e => parseFloat(e.nota_final) < umbral);
+        const filtrados = data.estudiantes.filter(e => parseFloat(e.prom_tareas) < umbral);
         datosRendimientoActual = filtrados;
         if (btnTutor) btnTutor.style.display = (filtrados.length > 0 && filtrados[0].tutor_telefono) ? '' : 'none';
         if (filtrados.length === 0) {
@@ -222,28 +227,27 @@ async function cargarRendimiento(grupoId) {
             return;
         }
         filtrados.forEach((row, i) => {
-            const nota = parseFloat(row.nota_final) || 0;
+            const nota = parseFloat(row.prom_tareas) || 0;
             let badge = 'bg-warning text-dark';
             if (nota < 4) badge = 'bg-danger';
             else if (nota < 5) badge = 'bg-danger';
-            const whatsapp = generarWhatsApp(row.nombres_apellidos, row.representante, row.telefono_representante, 'bajo rendimiento', `Nota Final en Clase hasta la fecha: ${row.nota_final}`, row.profesor, row.nombre_materia || row.nombre_grupo, row.nombre_grupo);
+            const whatsapp = generarWhatsApp(row.nombres_apellidos, row.representante, row.telefono_representante, 'bajo rendimiento', `Promedio de Tareas en Clase hasta la fecha: ${row.prom_tareas}`, row.profesor, row.nombre_materia || row.nombre_grupo, row.nombre_grupo);
             tbody.innerHTML += `
                 <tr>
                     <td>${i + 1}</td>
                     <td>${row.cedula}</td>
                     <td>${nombreEstudiante(row.nombres_apellidos, row.discapacidad)}</td>
                     <td>${row.nombre_materia || row.nombre_grupo}</td>
-                    <td>${row.prom_tareas}</td>
+                    <td class="fw-bold text-danger">${row.prom_tareas}</td>
                     <td>${row.proyecto_final}</td>
                     <td>${row.examen_final}</td>
-                    <td class="fw-bold text-danger">${row.nota_final}</td>
+                    <td>${row.nota_final}</td>
                     <td><span class="badge ${badge}">${nota < 4 ? 'Crítica' : 'Baja'}</span></td>
                     <td>${whatsapp}</td>
                 </tr>
             `;
         });
-        showNotification(`${filtrados.length} alertas de bajo rendimiento encontradas`, 'warning');
-    } catch (err) {
+        showNotification(`${filtrados.length} alertas de bajo rendimiento encontradas`, 'warning');    } catch (err) {
         console.error('Error:', err);
     }
 }

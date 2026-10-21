@@ -122,16 +122,19 @@ async function calcularNotasGrupo(db, nombre_grupo, materia_id, trimestre) {
     });
 
     const notasFinales = [];
+    const promediosTareas = [];
     const detalleEstudiantes = [];
 
     for (const est of estudiantes) {
         const notas = notasPorGrupo[est.grupo_id] || [];
-        const tareas = notas.filter(n => n.tipo === 'tarea').map(n => parseFloat(n.nota) || 0);
+        // Solo las tareas con nota registrada (ignorar celdas vacias o solo con comentario)
+        const tareas = notas.filter(n => n.tipo === 'tarea' && n.nota !== null && n.nota !== undefined && !isNaN(parseFloat(n.nota)));
         const proyectos = notas.filter(n => n.tipo === 'proyecto');
         const examenes = notas.filter(n => n.tipo === 'examen');
 
         let promTareas = 0;
-        if (tareas.length > 0) promTareas = tareas.reduce((a, b) => a + b, 0) / tareas.length;
+        if (tareas.length > 0) promTareas = tareas.reduce((a, n) => a + parseFloat(n.nota), 0) / tareas.length;
+        const tieneTareas = tareas.length > 0;
 
         let proyFinal = 0;
         if (proyectos.length > 0) {
@@ -153,6 +156,7 @@ async function calcularNotasGrupo(db, nombre_grupo, materia_id, trimestre) {
         const tieneNotas = tareas.length > 0 || proyectos.length > 0 || examenes.length > 0;
 
         if (tieneNotas) notasFinales.push(notaFinal);
+        if (tieneTareas) promediosTareas.push(promTareas);
 
         detalleEstudiantes.push({
             cedula: est.cedula,
@@ -166,6 +170,7 @@ async function calcularNotasGrupo(db, nombre_grupo, materia_id, trimestre) {
             tutor_nombre: est.tutor_nombre || '',
             tutor_telefono: est.tutor_telefono || '',
             prom_tareas: promTareas.toFixed(2),
+            tiene_tareas: tieneTareas,
             proyecto_final: proyFinal.toFixed(2),
             examen_final: exaFinal.toFixed(2),
             nota_final: notaFinal.toFixed(2),
@@ -173,11 +178,19 @@ async function calcularNotasGrupo(db, nombre_grupo, materia_id, trimestre) {
         });
     }
 
-    const promedioClase = notasFinales.length > 0
+    // Referencia de la clase: PROMEDIO DE TAREAS (no el promedio final)
+    const promedioClase = promediosTareas.length > 0
+        ? promediosTareas.reduce((a, b) => a + b, 0) / promediosTareas.length
+        : 0;
+    const promedioFinalClase = notasFinales.length > 0
         ? notasFinales.reduce((a, b) => a + b, 0) / notasFinales.length
         : 0;
 
-    return { promedioClase, estudiantes: detalleEstudiantes.filter(e => e.tiene_notas) };
+    return {
+        promedioClase,
+        promedioFinalClase,
+        estudiantes: detalleEstudiantes.filter(e => e.tiene_notas)
+    };
 }
 
 router.get('/rendimiento/:grupo_id', async (req, res) => {
@@ -192,7 +205,12 @@ router.get('/rendimiento/:grupo_id', async (req, res) => {
         if (grupoInfo.length === 0) return res.json({ promedio_clase: '0.00', estudiantes: [] });
         const { nombre_grupo, materia_id } = grupoInfo[0];
         const result = await calcularNotasGrupo(db, nombre_grupo, materia_id, trimestre);
-        res.json({ promedio_clase: result.promedioClase.toFixed(2), estudiantes: result.estudiantes });
+        res.json({
+            promedio_clase: result.promedioClase.toFixed(2),
+            promedio_clase_final: result.promedioFinalClase.toFixed(2),
+            referencia: 'promedio_tareas',
+            estudiantes: result.estudiantes
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
