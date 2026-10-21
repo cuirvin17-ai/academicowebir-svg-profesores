@@ -4,3 +4,6 @@ node_modules/
 uploads/
 server_pid.txt
 tunnel_*.log
+backups/
+backup_*.json
+_tmp_*.js
