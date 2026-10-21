@@ -408,6 +408,34 @@ router.delete('/asignacion-curso', async (req, res) => {
     }
 });
 
+// ========== SINCRONIZACION DE ASIGNACIONES ==========
+
+// Sincroniza los alumnos matriculados con las materias de su curso/paralelo/especialidad.
+// Agrega lo que falte y retira asignaciones que no corresponden (sin tocar notas).
+router.post('/sincronizar-asignaciones', async (req, res) => {
+    try {
+        const db = req.db;
+        const schoolId = req.session.user.school_id;
+        const anio = req.session.user.anio_lectivo || '2026-2027';
+        const { asignarLoteAMaterias, sincronizarAsignaciones } = require('../config/autoAsignacion');
+
+        const resultado = await sincronizarAsignaciones(db, {
+            school_id: schoolId,
+            anio_lectivo: anio,
+            limpiarHuerfanos: true
+        });
+
+        res.json({
+            message: `Sincronizacion completada: ${resultado.agregados} asignacion(es) agregada(s), ${resultado.huerfanosEliminados} retirada(s)`,
+            anio_lectivo: anio,
+            ...resultado
+        });
+    } catch (err) {
+        console.error('Error al sincronizar asignaciones:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ========== TUTORES ==========
 
 // Listar tutores

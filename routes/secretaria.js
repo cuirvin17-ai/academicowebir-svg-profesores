@@ -110,6 +110,23 @@ router.post('/estudiantes', async (req, res) => {
                 anio, curso || null, paralelo || null, especialidad || null, schoolId
             ]
         );
+
+        // Asignacion automatica: el alumno queda en las materias de su curso/paralelo/especialidad
+        try {
+            const { asignarEstudianteAMaterias } = require('../config/autoAsignacion');
+            const asignadas = await asignarEstudianteAMaterias(db, {
+                estudiante_id: result.insertId,
+                curso, paralelo, especialidad,
+                anio_lectivo: anio,
+                school_id: schoolId
+            });
+            if (asignadas > 0) {
+                console.log(`Alumno ${result.insertId} asignado a ${asignadas} materia(s)`);
+            }
+        } catch (e) {
+            console.error('Error en asignacion automatica:', e.message);
+        }
+
         res.json({ message: 'Estudiante matriculado exitosamente', id: result.insertId, numero_matricula: numeroMatricula });
     } catch (err) {
         console.error('Error al crear estudiante:', err);
@@ -136,9 +153,16 @@ router.put('/estudiantes/:id', async (req, res) => {
             const hoy = new Date();
             const nac = new Date(fecha_nacimiento);
             edad = hoy.getFullYear() - nac.getFullYear();
-            const m = hoy.getMonth() - nac.getMonth();
-            if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+            const m = hoy.getMonth() - new Date().getMonth();
+            if (m < 0 || (m === 0 && hoy.getDate() < new Date().getDate())) edad--;
         }
+
+        // Datos actuales (para detectar cambio de curso/paralelo/especialidad)
+        const [actuales] = await db.query(
+            'SELECT curso, paralelo, especialidad, anio_lectivo FROM estudiantes WHERE id = ? AND school_id = ?',
+            [id, schoolId]
+        );
+        const previo = actuales[0] || {};
 
         await db.query(
             `UPDATE estudiantes SET
@@ -159,6 +183,31 @@ router.put('/estudiantes/:id', async (req, res) => {
                 activo !== undefined ? activo : 1, id, schoolId
             ]
         );
+
+        // Si cambio de curso/paralelo/especialidad: reasignar (migrando sus notas)
+        const cambioDeGrupo =
+            (previo.curso || null) !== (curso || null) ||
+            (previo.paralelo || null) !== (paralelo || null) ||
+            (previo.especialidad || null) !== (especialidad || null) ||
+            (previo.anio_lectivo || null) !== (anio_lectivo || null);
+
+        if (cambioDeGrupo) {
+            try {
+                const { reasignarEstudiante } = require('../config/autoAsignacion');
+                const r = await reasignarEstudiante(db, {
+                    estudiante_id: parseInt(id),
+                    curso, paralelo, especialidad,
+                    anio_lectivo: anio_lectivo || previo.anio_lectivo || '2026-2027',
+                    school_id: schoolId
+                });
+                if (r.agregados > 0 || r.notasMigradas > 0) {
+                    console.log(`Alumno ${id} reasignado: +${r.agregados} materia(s), ${r.notasMigradas} nota(s) migrada(s)`);
+                }
+            } catch (e) {
+                console.error('Error en reasignacion automatica:', e.message);
+            }
+        }
+
         res.json({ message: 'Estudiante actualizado exitosamente' });
     } catch (err) {
         console.error('Error al editar estudiante:', err);
@@ -221,6 +270,7 @@ router.post('/importar-excel', upload.single('archivo'), async (req, res) => {
         const db = req.db;
         const schoolId = req.session.user.school_id;
         let insertados = 0, omitidos = 0, errores = [];
+        const idsInsertados = [];
         const anioDefault = '2026-2027';
 
         for (const row of rows) {
@@ -293,7 +343,7 @@ router.post('/importar-excel', upload.single('archivo'), async (req, res) => {
                 if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
             }
 
-            await db.query(
+            const [resIns] = await db.query(
                 `INSERT INTO estudiantes (
                     numero_matricula, cedula, nombres_apellidos, sexo, fecha_nacimiento, edad, email,
                     tipo_sangre, discapacidad, discapacidad_tipo,
@@ -327,11 +377,21 @@ router.post('/importar-excel', upload.single('archivo'), async (req, res) => {
                 ]
             );
             insertados++;
+            idsInsertados.push(resIns.insertId);
+        }
+
+        // Asignacion automatica de los alumnos importados a sus materias
+        let asignaciones = 0;
+        try {
+            const { asignarLoteAMaterias } = require('../config/autoAsignacion');
+            asignaciones = await asignarLoteAMaterias(db, idsInsertados);
+        } catch (e) {
+            console.error('Error en asignacion automatica (importacion):', e.message);
         }
 
         res.json({
             message: `Importacion completada: ${insertados} insertados, ${omitidos} omitidos`,
-            insertados, omitidos, errores: errores.slice(0, 10)
+            insertados, omitidos, asignaciones, errores: errores.slice(0, 10)
         });
     } catch (err) {
         console.error('Error al importar Excel:', err);
