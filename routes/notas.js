@@ -273,7 +273,7 @@ router.post('/crear-vacia', async (req, res) => {
     }
 });
 
-// Registrar múltiples notas a la vez (DELETE + INSERT para limpiar y re-insertar)
+// Registrar múltiples notas a la vez (UPSERT que conserva comentarios e IDs de nota)
 router.post('/grupo/:grupo_id/trimestre/:trimestre/multiple', async (req, res) => {
     const db = req.db;
     const { grupo_id, trimestre } = req.params;
@@ -281,26 +281,55 @@ router.post('/grupo/:grupo_id/trimestre/:trimestre/multiple', async (req, res) =
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        
-        // Eliminar todas las notas existentes para este grupo en este trimestre
-        await conn.query(
-            'DELETE FROM notas WHERE grupo_id = ? AND trimestre = ?',
-            [grupo_id, parseInt(trimestre)]
+
+        const gId = parseInt(grupo_id);
+        const trimestreNum = parseInt(trimestre);
+
+        // Notas actuales del grupo/trimestre (para conservar comentario e id)
+        const [existentes] = await conn.query(
+            'SELECT id, tipo, indice, comentario FROM notas WHERE grupo_id = ? AND trimestre = ?',
+            [gId, trimestreNum]
         );
-        
-        // Insertar solo las notas no nulas
+        const porClave = new Map();
+        for (const n of existentes) {
+            porClave.set(`${n.tipo}|${n.indice || 0}`, n);
+        }
+
+        const clavesEnviadas = new Set();
+
         for (const item of notas) {
-            if (item.nota !== null && item.nota !== undefined && item.nota !== '') {
+            const tipo = item.tipo;
+            const indice = parseInt(item.indice || 0);
+            const valor = (item.nota === null || item.nota === undefined || item.nota === '') ? null : item.nota;
+            const clave = `${tipo}|${indice}`;
+            clavesEnviadas.add(clave);
+
+            const previo = porClave.get(clave);
+            if (previo) {
+                // Actualiza la nota conservando el comentario y el id de la fila
+                await conn.query(
+                    'UPDATE notas SET nota = ?, fecha_registro = ? WHERE id = ?',
+                    [valor, item.fecha_registro || new Date(), previo.id]
+                );
+            } else {
                 await conn.query(
                     'INSERT INTO notas (grupo_id, trimestre, tipo, nota, fecha_registro, comentario, indice) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [grupo_id, parseInt(trimestre), item.tipo, item.nota, item.fecha_registro, item.comentario || null, item.indice || 0]
+                    [gId, trimestreNum, tipo, valor, item.fecha_registro || new Date(), item.comentario || null, indice]
                 );
             }
         }
-        
+
+        // Limpiar celdas que ya no existen, pero nunca borrar una que tenga comentario
+        for (const n of existentes) {
+            const clave = `${n.tipo}|${n.indice || 0}`;
+            if (!clavesEnviadas.has(clave) && (!n.comentario || String(n.comentario).trim() === '')) {
+                await conn.query('DELETE FROM notas WHERE id = ?', [n.id]);
+            }
+        }
+
         // Calcular promedio DENTRO de la transacción
-        await calcularPromedio(conn, grupo_id, parseInt(trimestre));
-        
+        await calcularPromedio(conn, gId, trimestreNum);
+
         await conn.commit();
         res.json({ message: 'Notas guardadas exitosamente' });
     } catch (err) {

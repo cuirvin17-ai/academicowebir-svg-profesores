@@ -383,6 +383,13 @@ function colorNotaValor(v) {
     return 'fw-bold text-success';
 }
 
+// Texto de una nota para los inputs (evita NaN cuando la nota es null/vacia)
+function notaTexto(nota) {
+    if (nota === null || nota === undefined || nota === '') return '';
+    const n = parseFloat(nota);
+    return isNaN(n) ? '' : n.toFixed(1);
+}
+
 async function cargarTablaNotas() {
     const tbody = document.getElementById('tablaNotasEstudiantes');
     tbody.innerHTML = '';
@@ -667,7 +674,7 @@ async function cargarTablaNotas() {
             
             for (let i = 0; i < tareasCount; i++) {
                 const t = tareasPorIndice[i];
-                const val = t ? parseFloat(t.nota).toFixed(1) : '';
+                const val = t ? notaTexto(t.nota) : '';
                 const tareaId = t ? t.id : '';
                 const comentario = t && t.comentario ? t.comentario : '';
                 const tieneComentario = comentario ? 'text-warning' : '';
@@ -686,15 +693,15 @@ async function cargarTablaNotas() {
             const promTareas = tareasConNota.length > 0 && tareasCount > 0 ? (tareasConNota.reduce((s, t) => s + parseFloat(t.nota), 0) / tareasCount).toFixed(2) : '';
             const pctTareasVal = promTareas ? (parseFloat(promTareas) * porcentajes.promedio_tareas / 100).toFixed(2) : '';
             
-            const proyNota = proyectosPorIndice[0] ? parseFloat(proyectosPorIndice[0].nota).toFixed(1) : '';
+            const proyNota = proyectosPorIndice[0] ? notaTexto(proyectosPorIndice[0].nota) : '';
             const proyNotaId = proyectosPorIndice[0] ? proyectosPorIndice[0].id : '';
             const proyNotaCom = proyectosPorIndice[0] && proyectosPorIndice[0].comentario ? proyectosPorIndice[0].comentario : '';
             const tieneProyNotaCom = proyNotaCom ? 'text-warning' : '';
 
-            const proyDeberRec = proyectosPorIndice[1] ? parseFloat(proyectosPorIndice[1].nota).toFixed(1) : '';
+            const proyDeberRec = proyectosPorIndice[1] ? notaTexto(proyectosPorIndice[1].nota) : '';
             const proyDeberRecId = proyectosPorIndice[1] ? proyectosPorIndice[1].id : '';
 
-            const proyRec = proyectosPorIndice[2] ? parseFloat(proyectosPorIndice[2].nota).toFixed(1) : '';
+            const proyRec = proyectosPorIndice[2] ? notaTexto(proyectosPorIndice[2].nota) : '';
             const proyRecId = proyectosPorIndice[2] ? proyectosPorIndice[2].id : '';
 
             const proyFinalVals = [proyNota, proyDeberRec, proyRec].filter(v => v !== '');
@@ -702,15 +709,15 @@ async function cargarTablaNotas() {
             const proyFinal = (proyNota !== '' && proyProm < parseFloat(proyNota)) ? proyNota : (proyProm > 0 ? proyProm.toFixed(2) : '');
             const pctProyVal = proyFinal ? (parseFloat(proyFinal) * porcentajes.proyecto / 100).toFixed(2) : '';
             
-            const examNota = examenesPorIndice[0] ? parseFloat(examenesPorIndice[0].nota).toFixed(1) : '';
+            const examNota = examenesPorIndice[0] ? notaTexto(examenesPorIndice[0].nota) : '';
             const examNotaId = examenesPorIndice[0] ? examenesPorIndice[0].id : '';
             const examNotaCom = examenesPorIndice[0] && examenesPorIndice[0].comentario ? examenesPorIndice[0].comentario : '';
             const tieneExamNotaCom = examNotaCom ? 'text-warning' : '';
 
-            const examDre = examenesPorIndice[1] ? parseFloat(examenesPorIndice[1].nota).toFixed(1) : '';
+            const examDre = examenesPorIndice[1] ? notaTexto(examenesPorIndice[1].nota) : '';
             const examDreId = examenesPorIndice[1] ? examenesPorIndice[1].id : '';
 
-            const examEr = examenesPorIndice[2] ? parseFloat(examenesPorIndice[2].nota).toFixed(1) : '';
+            const examEr = examenesPorIndice[2] ? notaTexto(examenesPorIndice[2].nota) : '';
             const examErId = examenesPorIndice[2] ? examenesPorIndice[2].id : '';
 
             const examFinalVals = [examNota, examDre, examEr].filter(v => v !== '');
@@ -864,7 +871,7 @@ async function cargarTablaNotas() {
                 const examenesPorIndice = {};
                 examenes.forEach(e => { examenesPorIndice[e.indice || 0] = e; });
 
-                const tareasConNota = Object.values(tareasPorIndice).filter(t => t.nota !== null && t.nota !== undefined);
+            const tareasConNota = Object.values(tareasPorIndice).filter(t => t.nota !== null && t.nota !== undefined && !isNaN(parseFloat(t.nota)));
                 const promT = tareasConNota.length > 0 && tareasCount > 0 ? (tareasConNota.reduce((s, t) => s + parseFloat(t.nota), 0) / tareasCount) : 0;
                 promTareasArr.push(promT);
                 promTareasPctArr.push(promT * porcentajes.promedio_tareas / 100);
