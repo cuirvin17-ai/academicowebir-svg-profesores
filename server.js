@@ -229,6 +229,30 @@ app.use('/api/tutor', requireAuth, injectDB, tutorRoutes);
         console.log('Migración asignacion_tutores:', err.message);
     }
 
+    // Migración: nombres personalizados de las columnas de tareas (T1, T2...)
+    // Guarda en BD los renombres hechos por el docente para que no se pierdan
+    try {
+        const db = getPool();
+        await db.query(`CREATE TABLE IF NOT EXISTS tareas_nombres (
+            id INT NOT NULL AUTO_INCREMENT,
+            materia_id INT NOT NULL,
+            curso VARCHAR(50) NOT NULL,
+            paralelo VARCHAR(50) NOT NULL,
+            trimestre VARCHAR(10) NOT NULL,
+            indice INT NOT NULL,
+            nombre VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY unique_tarea_nombre (materia_id, curso, paralelo, trimestre, indice),
+            CONSTRAINT fk_tareas_nombres_materia FOREIGN KEY (materia_id)
+                REFERENCES materias (id) ON DELETE CASCADE
+        )`);
+        console.log('Migración: tabla tareas_nombres verificada');
+    } catch (err) {
+        console.log('Migración tareas_nombres:', err.message);
+    }
+
     // Migración: historial de comportamiento para tutores
     try {
         const db = getPool();

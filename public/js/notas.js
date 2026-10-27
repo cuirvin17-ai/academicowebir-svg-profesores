@@ -327,14 +327,15 @@ function cargarEstudiantesNotas() {
     });
 }
 
-function agregarColumnaTarea() {
+async function agregarColumnaTarea() {
     tareasCount++;
     tareasNombres[tareasCount] = `T${tareasCount}`;
+    await guardarNombresTareas();
     cargarTablaNotas();
     showNotification(`Tarea T${tareasCount} agregada`, 'info');
 }
 
-function eliminarColumnaTarea(num) {
+async function eliminarColumnaTarea(num) {
     if (!confirm(`¿Eliminar la tarea ${tareasNombres[num] || 'T' + num}? Se eliminarán todas las notas de esta columna.`)) return;
     
     // Eliminar de la BD
@@ -351,29 +352,114 @@ function eliminarColumnaTarea(num) {
     }
     delete tareasNombres[tareasCount];
     tareasCount--;
+    await guardarNombresTareas();
     cargarTablaNotas();
 }
 
-function renombrarTarea(num) {
+async function renombrarTarea(num) {
     const nombre = prompt(`Nombre de la tarea:`, tareasNombres[num] || `T${num}`);
     if (nombre !== null && nombre.trim() !== '') {
         tareasNombres[num] = nombre.trim();
-        guardarNombresTareas();
+        await guardarNombresTareas();
         cargarTablaNotas();
     }
 }
 
-function guardarNombresTareas() {
-    const key = `tareas_${currentGrupoId}_${currentTrimestre}`;
-    localStorage.setItem(key, JSON.stringify(tareasNombres));
+// ===== Nombres de las columnas de tareas (T1, T2...) =====
+// Se guardan en la BD para que no se pierdan al cambiar de navegador/dispositivo.
+// localStorage queda solo como respaldo si no hay conexión.
+let tareasNombresServidorOk = false;   // true si la última carga desde la BD fue exitosa
+let tareasNombresServidorJson = '';    // JSON de lo que hay en la BD (para no re-guardar sin cambios)
+
+function tareasNombresKey() {
+    return `tareas_${currentGrupoId}_${currentTrimestre}`;
 }
 
-function cargarNombresTareas() {
-    const key = `tareas_${currentGrupoId}_${currentTrimestre}`;
-    const guardados = localStorage.getItem(key);
-    if (guardados) {
-        tareasNombres = JSON.parse(guardados);
+function nombresToJSON() {
+    // Ordena por índice para comparar de forma estable
+    const ordenado = {};
+    Object.keys(tareasNombres).map(k => parseInt(k)).filter(n => !isNaN(n)).sort((a, b) => a - b)
+        .forEach(i => { ordenado[i] = tareasNombres[i]; });
+    return JSON.stringify(ordenado);
+}
+
+async function guardarNombresTareas() {
+    const json = nombresToJSON();
+
+    // Respaldo local (por si la BD no está disponible)
+    try { localStorage.setItem(tareasNombresKey(), json); } catch (e) {}
+
+    if (!currentMateriaId || currentTrimestre === 'final') return;
+    // Si la carga desde la BD falló, no sobrescribimos con datos locales posiblemente viejos
+    if (!tareasNombresServidorOk) return;
+    // Si no cambió respecto a lo que hay en la BD, no volvemos a guardar
+    if (json === tareasNombresServidorJson) return;
+
+    const nombres = JSON.parse(json);
+    // Si la BD está vacía y solo tenemos los nombres por defecto (T1, T2...),
+    // NO guardamos: así un dispositivo "en blanco" (celular recién abierto)
+    // no pisa los nombres personalizados que otro dispositivo (la PC) va a
+    // migrar a la BD en su primera carga.
+    const todosPorDefecto = Object.keys(nombres).every(k => nombres[k] === `T${k}`);
+    if (tareasNombresServidorJson === '' && todosPorDefecto) return;
+
+    try {
+        const res = await fetch('/api/notas/tareas-nombres', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                materia_id: currentMateriaId,
+                curso: currentCurso,
+                paralelo: currentParalelo,
+                trimestre: currentTrimestre,
+                nombres
+            })
+        });
+        if (res.ok) {
+            tareasNombresServidorJson = json;
+        } else {
+            console.error('Error guardando nombres de tareas:', await res.text());
+        }
+    } catch (err) {
+        console.error('Error de conexión guardando nombres de tareas:', err);
     }
+}
+
+async function cargarNombresTareas() {
+    tareasNombresServidorOk = false;
+    tareasNombresServidorJson = '';
+
+    if (currentMateriaId && currentTrimestre !== 'final') {
+        try {
+            const url = `/api/notas/tareas-nombres?materia_id=${currentMateriaId}` +
+                `&curso=${encodeURIComponent(currentCurso)}` +
+                `&paralelo=${encodeURIComponent(currentParalelo)}` +
+                `&trimestre=${encodeURIComponent(currentTrimestre)}`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const rows = await res.json();
+                if (rows.length > 0) {
+                    const map = {};
+                    rows.forEach(r => { map[r.indice] = r.nombre; });
+                    tareasNombres = map;
+                    tareasNombresServidorOk = true;
+                    tareasNombresServidorJson = JSON.stringify(map);
+                    try { localStorage.setItem(tareasNombresKey(), tareasNombresServidorJson); } catch (e) {}
+                    return;
+                }
+                // BD accesible pero sin nombres guardados todavía
+                tareasNombresServidorOk = true;
+            }
+        } catch (err) {
+            console.error('Error cargando nombres de tareas:', err);
+        }
+    }
+
+    // Respaldo local (primera vez o sin conexión)
+    try {
+        const guardados = localStorage.getItem(tareasNombresKey());
+        if (guardados) tareasNombres = JSON.parse(guardados);
+    } catch (e) {}
 }
 
 function colorNotaValor(v) {
@@ -554,15 +640,34 @@ async function cargarTablaNotas() {
                     }
                 }
             }
-            if (maxIndice >= 0) tareasCount = maxIndice + 1;
+            // También considerar los nombres guardados de tareas:
+            // así las columnas renombradas no desaparecen si aún no tienen notas.
+            // OJO: las claves de tareasNombres son 1-based (T1 = 1) y los índices
+            // de la tabla `notas` son 0-based, por eso se calculan por separado.
+            await cargarNombresTareas();
+            let maxNombreKey = 0;
+            for (const k of Object.keys(tareasNombres)) {
+                const idx = parseInt(k);
+                // Ignorar claves inválidas o absurdas de datos locales viejos
+                if (!isNaN(idx) && idx >= 1 && idx < 50 && idx > maxNombreKey) maxNombreKey = idx;
+            }
+            const totalPorNotas = maxIndice >= 0 ? maxIndice + 1 : 0;
+            tareasCount = Math.max(totalPorNotas, maxNombreKey);
+        } else {
+            await cargarNombresTareas();
         }
-        
-        // Cargar nombres de tareas desde localStorage
-        cargarNombresTareas();
+
+        // Limpiar claves fuera del rango útil (evita columnas fantasma)
+        for (const k of Object.keys(tareasNombres)) {
+            const idx = parseInt(k);
+            if (isNaN(idx) || idx < 1 || idx > tareasCount) delete tareasNombres[k];
+        }
+
+        // Completar nombres por defecto (T1, T2...) solo si faltan
         for (let i = 1; i <= tareasCount; i++) {
             if (!tareasNombres[i]) tareasNombres[i] = `T${i}`;
         }
-        guardarNombresTareas();
+        await guardarNombresTareas();
         
         // Actualizar nombre del grupo seleccionado
         const select = document.getElementById('grupo_notas');

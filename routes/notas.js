@@ -577,6 +577,68 @@ router.delete('/tarea-indice/:grupo_id/:trimestre/:indice', async (req, res) => 
     }
 });
 
+// ===== Nombres personalizados de las columnas de tareas (T1, T2...) =====
+
+// Obtener nombres guardados para una materia+curso+paralelo+trimestre
+router.get('/tareas-nombres', async (req, res) => {
+    const db = req.db;
+    const { materia_id, curso, paralelo, trimestre } = req.query;
+    try {
+        const [rows] = await db.query(
+            'SELECT indice, nombre FROM tareas_nombres WHERE materia_id = ? AND curso = ? AND paralelo = ? AND trimestre = ? ORDER BY indice',
+            [materia_id, curso, paralelo, trimestre]
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Guardar/actualizar nombres de tareas (reemplaza los de esa configuración)
+router.post('/tareas-nombres', async (req, res) => {
+    const db = req.db;
+    const { materia_id, curso, paralelo, trimestre, nombres } = req.body;
+    if (!materia_id || !curso || !paralelo || !trimestre || !nombres || typeof nombres !== 'object') {
+        return res.status(400).json({ error: 'Datos incompletos' });
+    }
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const claves = Object.keys(nombres).map(k => parseInt(k)).filter(n => !isNaN(n));
+
+        // Guardar/actualizar cada nombre (solo si difiere del por defecto T{n} o ya existe)
+        for (const idx of claves) {
+            const nombre = String(nombres[idx] || '').trim();
+            if (!nombre) continue;
+            await conn.query(
+                `INSERT INTO tareas_nombres (materia_id, curso, paralelo, trimestre, indice, nombre)
+                 VALUES (?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE nombre = VALUES(nombre)`,
+                [materia_id, curso, paralelo, trimestre, idx, nombre]
+            );
+        }
+
+        // Eliminar registros de índices que ya no existen en la tabla
+        if (claves.length > 0) {
+            await conn.query(
+                `DELETE FROM tareas_nombres
+                 WHERE materia_id = ? AND curso = ? AND paralelo = ? AND trimestre = ?
+                 AND indice NOT IN (${claves.map(() => '?').join(',')})`,
+                [materia_id, curso, paralelo, trimestre, ...claves]
+            );
+        }
+
+        await conn.commit();
+        res.json({ message: 'Nombres de tareas guardados' });
+    } catch (err) {
+        await conn.rollback();
+        res.status(500).json({ error: err.message });
+    } finally {
+        conn.release();
+    }
+});
+
 module.exports = router;
 
 module.exports.calcularPromedio = calcularPromedio;
