@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 
 router.get('/view', (req, res) => {
+    // Evitar que el navegador muestre una versión guardada en caché
+    res.set('Cache-Control', 'no-store');
     res.render('esquelas', { user: req.session.user });
 });
 
