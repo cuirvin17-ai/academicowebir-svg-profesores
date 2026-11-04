@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="/js/main.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -34,35 +36,84 @@
                             <input type="text" class="form-control" id="busquedaEstudiante" placeholder="Cedula o nombre..." autocomplete="off">
                             <div id="listaEstudiantes" class="list-group position-absolute" style="z-index:10; display:none; max-height:250px; overflow-y:auto;"></div>
                         </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold">Curso</label>
+                            <select class="form-select" id="filtroCursoRegistro" onchange="buscarEstudiantesFiltro()">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold">Paralelo</label>
+                            <select class="form-select" id="filtroParaleloRegistro" onchange="buscarEstudiantesFiltro()">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Especialidad</label>
+                            <select class="form-select" id="filtroEspecialidadRegistro" onchange="buscarEstudiantesFiltro()">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="infoEstudiante" class="alert alert-secondary d-none mb-2"></div>
+                    <div class="row mb-3">
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Fecha de Envio</label>
                             <input type="date" class="form-control" id="fechaEnvio">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label fw-bold">Motivo <small class="text-muted">(opcional)</small></label>
                             <input type="text" class="form-control" id="motivoEsquela" placeholder="Motivo del llamado...">
                         </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button class="btn btn-success w-100" onclick="registrarEsquela()"><i class="fas fa-save me-1"></i>Registrar Esquela</button>
+                        </div>
                     </div>
-                    <div id="infoEstudiante" class="alert alert-secondary d-none mb-2"></div>
-                    <button class="btn btn-success" onclick="registrarEsquela()"><i class="fas fa-save me-1"></i>Registrar Esquela</button>
                 </div>
 
                 <!-- Listado -->
-                <div class="row mb-3 align-items-end">
-                    <div class="col-md-3">
+                <div class="row mb-2 align-items-end">
+                    <div class="col-md-2">
                         <label class="form-label fw-bold">Estado</label>
                         <select id="filtroEstado" class="form-select form-select-sm" onchange="cargarEsquelas()">
                             <option value="">Todas</option>
-                            <option value="pendiente">Pendientes de llegada</option>
-                            <option value="atendida">Atendidas (llego el padre)</option>
+                            <option value="pendiente">Pendientes</option>
+                            <option value="atendida">Atendidas</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Curso</label>
+                        <select id="filtroCurso" class="form-select form-select-sm" onchange="cargarEsquelas()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Paralelo</label>
+                        <select id="filtroParalelo" class="form-select form-select-sm" onchange="cargarEsquelas()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Especialidad</label>
+                        <select id="filtroEspecialidad" class="form-select form-select-sm" onchange="cargarEsquelas()">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label fw-bold">Buscar en el listado</label>
                         <input type="text" class="form-control form-control-sm" id="filtroTexto" placeholder="Nombre o cedula..." oninput="cargarEsquelas()">
                     </div>
-                    <div class="col-md-5 text-end">
-                        <span id="resumenEsquelas" class="text-muted"></span>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <span id="resumenEsquelas" class="text-muted"></span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-success" onclick="exportarExcelEsquelas()" title="Descargar Excel de las esquelas listadas">
+                            <i class="fas fa-file-excel me-1"></i>Excel
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="exportarPDFEsquelas()" title="Descargar PDF de las esquelas listadas">
+                            <i class="fas fa-file-pdf me-1"></i>PDF
+                        </button>
                     </div>
                 </div>
 
@@ -149,13 +200,55 @@
 
         document.getElementById('fechaEnvio').value = new Date().toISOString().split('T')[0];
 
-        // ===== Buscador de estudiantes =====
-        document.getElementById('busquedaEstudiante').addEventListener('input', async function() {
-            const valor = this.value.trim();
-            const lista = document.getElementById('listaEstudiantes');
-            if (valor.length < 2) { lista.style.display = 'none'; return; }
+        // mysql2 devuelve DATE como ISO completo (2026-11-04T05:00:00.000Z);
+        // se toma solo la parte YYYY-MM-DD para formatear sin errores
+        function formatearFecha(f) {
+            if (!f) return null;
+            const soloFecha = String(f).substring(0, 10);
+            return new Date(soloFecha + 'T00:00:00').toLocaleDateString('es-ES');
+        }
+
+        function escaparHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        }
+
+        // ===== Cursos, paralelos y especialidades (para los selectores) =====
+        async function cargarGruposEsquelas() {
             try {
-                const res = await fetch(`/api/esquelas/buscar-estudiante?q=${encodeURIComponent(valor)}`);
+                const res = await fetch('/api/esquelas/grupos');
+                const grupos = await res.json();
+                const poblar = (idSel, campo, primerValor) => {
+                    const sel = document.getElementById(idSel);
+                    if (!sel) return;
+                    [...new Set(grupos.map(g => g[campo]).filter(Boolean))].forEach(v => {
+                        sel.innerHTML += `<option value="${v}">${v}</option>`;
+                    });
+                };
+                poblar('filtroCursoRegistro', 'curso');
+                poblar('filtroParaleloRegistro', 'paralelo');
+                poblar('filtroEspecialidadRegistro', 'especialidad');
+                poblar('filtroCurso', 'curso');
+                poblar('filtroParalelo', 'paralelo');
+                poblar('filtroEspecialidad', 'especialidad');
+            } catch (err) { console.error('Error al cargar cursos:', err); }
+        }
+
+        // ===== Buscador de estudiantes (texto + curso/paralelo/especialidad) =====
+        async function buscarEstudiantes() {
+            const valor = document.getElementById('busquedaEstudiante').value.trim();
+            const curso = document.getElementById('filtroCursoRegistro').value;
+            const paralelo = document.getElementById('filtroParaleloRegistro').value;
+            const especialidad = document.getElementById('filtroEspecialidadRegistro').value;
+            const lista = document.getElementById('listaEstudiantes');
+            // Si no hay texto ni filtros, no buscar; con filtro basta 0 caracteres
+            if (valor.length < 2 && !curso && !paralelo && !especialidad) { lista.style.display = 'none'; return; }
+            try {
+                let url = '/api/esquelas/buscar-estudiante?';
+                if (valor) url += `q=${encodeURIComponent(valor)}&`;
+                if (curso) url += `curso=${encodeURIComponent(curso)}&`;
+                if (paralelo) url += `paralelo=${encodeURIComponent(paralelo)}&`;
+                if (especialidad) url += `especialidad=${encodeURIComponent(especialidad)}`;
+                const res = await fetch(url);
                 const data = await res.json();
                 lista.innerHTML = '';
                 if (data.length === 0) { lista.style.display = 'none'; return; }
@@ -175,7 +268,14 @@
                 });
                 lista.style.display = 'block';
             } catch (err) { console.error(err); }
-        });
+        }
+
+        // Al cambiar curso/paralelo en el registro: volver a buscar en el desplegable
+        function buscarEstudiantesFiltro() {
+            buscarEstudiantes();
+        }
+
+        document.getElementById('busquedaEstudiante').addEventListener('input', buscarEstudiantes);
 
         document.addEventListener('click', function(e) {
             const lista = document.getElementById('listaEstudiantes');
@@ -214,8 +314,14 @@
             try {
                 const estado = document.getElementById('filtroEstado').value;
                 const q = document.getElementById('filtroTexto').value.trim();
+                const curso = document.getElementById('filtroCurso').value;
+                const paralelo = document.getElementById('filtroParalelo').value;
+                const especialidad = document.getElementById('filtroEspecialidad').value;
                 let url = '/api/esquelas?';
                 if (estado) url += `estado=${estado}&`;
+                if (curso) url += `curso=${encodeURIComponent(curso)}&`;
+                if (paralelo) url += `paralelo=${encodeURIComponent(paralelo)}&`;
+                if (especialidad) url += `especialidad=${encodeURIComponent(especialidad)}&`;
                 if (q) url += `q=${encodeURIComponent(q)}`;
                 const res = await fetch(url);
                 const data = await res.json();
@@ -228,13 +334,6 @@
                     return;
                 }
                 let pendientes = 0;
-                // mysql2 devuelve DATE como ISO completo (2026-11-04T05:00:00.000Z);
-                // se toma solo la parte YYYY-MM-DD para formatear sin errores
-                const formatearFecha = f => {
-                    if (!f) return null;
-                    const soloFecha = String(f).substring(0, 10);
-                    return new Date(soloFecha + 'T00:00:00').toLocaleDateString('es-ES');
-                };
                 data.forEach((e, i) => {
                     const fechaEnvio = formatearFecha(e.fecha_envio) || '-';
                     const fechaLlegada = formatearFecha(e.fecha_llegada);
@@ -335,6 +434,110 @@
             } catch (err) { console.error(err); showNotification('Error al guardar', 'danger'); }
         }
 
+        // ===== Descargas (Excel y PDF de las esquelas listadas) =====
+        function resumenFiltros() {
+            const partes = [];
+            const estado = document.getElementById('filtroEstado').value;
+            const curso = document.getElementById('filtroCurso').value;
+            const paralelo = document.getElementById('filtroParalelo').value;
+            const especialidad = document.getElementById('filtroEspecialidad').value;
+            const q = document.getElementById('filtroTexto').value.trim();
+            if (estado) partes.push(estado === 'pendiente' ? 'Pendientes' : 'Atendidas');
+            if (curso) partes.push(`Curso ${curso}`);
+            if (paralelo) partes.push(`Paralelo ${paralelo}`);
+            if (especialidad) partes.push(`Especialidad ${especialidad}`);
+            if (q) partes.push(`Busqueda: ${q}`);
+            return partes.length ? partes.join(' | ') : 'Todas las esquelas';
+        }
+
+        function exportarExcelEsquelas() {
+            if (!esquelasCache.length) { showNotification('No hay esquelas para descargar', 'warning'); return; }
+            if (typeof XLSX === 'undefined') { showNotification('Libreria Excel no cargada. Recargue la pagina.', 'danger'); return; }
+            const datos = [[
+                '#', 'Cedula', 'Estudiante', 'Curso', 'Paralelo', 'Especialidad',
+                'Fecha de Envio', 'Motivo', 'Fecha de Llegada del Padre', 'Estado', 'Registrado por'
+            ]];
+            esquelasCache.forEach((e, i) => {
+                datos.push([
+                    i + 1,
+                    e.cedula,
+                    e.nombres_apellidos,
+                    e.curso,
+                    e.paralelo,
+                    e.especialidad || '',
+                    formatearFecha(e.fecha_envio) || '',
+                    e.motivo || '',
+                    formatearFecha(e.fecha_llegada) || '',
+                    e.fecha_llegada ? 'Atendida' : 'Pendiente',
+                    e.registrado_por || ''
+                ]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(datos);
+            ws['!cols'] = [
+                { wch: 4 }, { wch: 13 }, { wch: 38 }, { wch: 10 }, { wch: 9 }, { wch: 18 },
+                { wch: 14 }, { wch: 30 }, { wch: 22 }, { wch: 12 }, { wch: 22 }
+            ];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Esquelas');
+            XLSX.writeFile(wb, `Esquelas_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showNotification('Excel descargado', 'success');
+        }
+
+        function exportarPDFEsquelas() {
+            if (!esquelasCache.length) { showNotification('No hay esquelas para descargar', 'warning'); return; }
+            if (typeof html2pdf === 'undefined') { showNotification('Libreria PDF no cargada. Recargue la pagina.', 'danger'); return; }
+
+            const filas = esquelasCache.map((e, i) => `
+                <tr>
+                    <td style="border:1px solid #999; padding:4px; text-align:center;">${i + 1}</td>
+                    <td style="border:1px solid #999; padding:4px;">${escaparHtml(e.cedula)}</td>
+                    <td style="border:1px solid #999; padding:4px;">${escaparHtml(e.nombres_apellidos)}</td>
+                    <td style="border:1px solid #999; padding:4px;">${escaparHtml(e.curso)} ${escaparHtml(e.paralelo)}</td>
+                    <td style="border:1px solid #999; padding:4px;">${escaparHtml(e.especialidad) || '-'}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:center;">${formatearFecha(e.fecha_envio) || '-'}</td>
+                    <td style="border:1px solid #999; padding:4px;">${escaparHtml(e.motivo) || '-'}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:center;">${formatearFecha(e.fecha_llegada) || '-'}</td>
+                    <td style="border:1px solid #999; padding:4px; text-align:center;">${e.fecha_llegada ? 'Atendida' : 'Pendiente'}</td>
+                </tr>`).join('');
+
+            const tabla = `
+                <table style="border-collapse:collapse; width:100%; font-size:10px;">
+                    <thead>
+                        <tr style="background:#198754; color:#fff;">
+                            <th style="border:1px solid #999; padding:5px;">#</th>
+                            <th style="border:1px solid #999; padding:5px;">Cedula</th>
+                            <th style="border:1px solid #999; padding:5px;">Estudiante</th>
+                            <th style="border:1px solid #999; padding:5px;">Curso</th>
+                            <th style="border:1px solid #999; padding:5px;">Especialidad</th>
+                            <th style="border:1px solid #999; padding:5px;">F. Envio</th>
+                            <th style="border:1px solid #999; padding:5px;">Motivo</th>
+                            <th style="border:1px solid #999; padding:5px;">F. Llegada Padre</th>
+                            <th style="border:1px solid #999; padding:5px;">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>${filas}</tbody>
+                </table>`;
+
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <h4 style="text-align:center; margin-bottom:4px;">Registro de Esquelas</h4>
+                <p style="text-align:center; margin-bottom:8px; font-size:11px;">
+                    <strong>Filtro:</strong> ${escaparHtml(resumenFiltros())} |
+                    <strong>Descargado:</strong> ${new Date().toLocaleDateString('es-ES')} |
+                    <strong>Total:</strong> ${esquelasCache.length}
+                </p>
+                ${tabla}`;
+
+            html2pdf().set({
+                margin: [10, 8, 10, 8],
+                filename: `Esquelas_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            }).from(div).save();
+            showNotification('PDF descargado', 'success');
+        }
+
         // ===== Eliminar =====
         async function eliminarEsquela(id) {
             if (!confirm('Eliminar este registro de esquela? (Solo se elimina la esquela, no las notas del estudiante)')) return;
@@ -345,8 +548,11 @@
             } catch (err) { console.error(err); showNotification('Error al eliminar', 'danger'); }
         }
 
-        // Cargar listado al iniciar
-        document.addEventListener('DOMContentLoaded', cargarEsquelas);
+        // Cargar listado y selectores de curso/paralelo al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarEsquelas();
+            cargarGruposEsquelas();
+        });
     </script>
 </body>
 </html>

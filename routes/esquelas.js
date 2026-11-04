@@ -5,19 +5,48 @@ router.get('/view', (req, res) => {
     res.render('esquelas', { user: req.session.user });
 });
 
-// Buscar estudiantes por cedula o nombre
+// Buscar estudiantes por cedula o nombre (con filtro opcional por curso/paralelo/especialidad)
 router.get('/buscar-estudiante', async (req, res) => {
     const db = req.db;
-    const { q } = req.query;
+    const { q, curso, paralelo, especialidad } = req.query;
     try {
-        const searchTerm = `%${q}%`;
+        let sql = `SELECT id, cedula, nombres_apellidos, curso, paralelo, especialidad, discapacidad
+                   FROM estudiantes
+                   WHERE activo = 1`;
+        const params = [];
+        if (q) {
+            sql += ' AND (cedula LIKE ? OR nombres_apellidos LIKE ?)';
+            params.push(`%${q}%`, `%${q}%`);
+        }
+        if (curso) {
+            sql += ' AND curso = ?';
+            params.push(curso);
+        }
+        if (paralelo) {
+            sql += ' AND paralelo = ?';
+            params.push(paralelo);
+        }
+        if (especialidad) {
+            sql += ' AND especialidad = ?';
+            params.push(especialidad);
+        }
+        sql += ' ORDER BY nombres_apellidos LIMIT 20';
+        const [rows] = await db.query(sql, params);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Cursos, paralelos y especialidades existentes (para poblar los selectores)
+router.get('/grupos', async (req, res) => {
+    const db = req.db;
+    try {
         const [rows] = await db.query(
-            `SELECT id, cedula, nombres_apellidos, curso, paralelo, especialidad, discapacidad
+            `SELECT DISTINCT curso, paralelo, especialidad
              FROM estudiantes
-             WHERE (cedula LIKE ? OR nombres_apellidos LIKE ?) AND activo = 1
-             ORDER BY nombres_apellidos
-             LIMIT 20`,
-            [searchTerm, searchTerm]
+             WHERE activo = 1
+             ORDER BY curso, paralelo, especialidad`
         );
         res.json(rows);
     } catch (err) {
@@ -29,7 +58,7 @@ router.get('/buscar-estudiante', async (req, res) => {
 router.get('/', async (req, res) => {
     const db = req.db;
     const user = req.session.user;
-    const { estado, q } = req.query;
+    const { estado, q, curso, paralelo, especialidad } = req.query;
     try {
         let sql = `
             SELECT e.*, est.nombres_apellidos, est.cedula, est.curso, est.paralelo, est.especialidad
@@ -40,6 +69,18 @@ router.get('/', async (req, res) => {
 
         if (estado === 'pendiente') sql += ' AND e.fecha_llegada IS NULL';
         if (estado === 'atendida') sql += ' AND e.fecha_llegada IS NOT NULL';
+        if (curso) {
+            sql += ' AND est.curso = ?';
+            params.push(curso);
+        }
+        if (paralelo) {
+            sql += ' AND est.paralelo = ?';
+            params.push(paralelo);
+        }
+        if (especialidad) {
+            sql += ' AND est.especialidad = ?';
+            params.push(especialidad);
+        }
         if (q) {
             sql += ' AND (est.nombres_apellidos LIKE ? OR est.cedula LIKE ?)';
             params.push(`%${q}%`, `%${q}%`);
