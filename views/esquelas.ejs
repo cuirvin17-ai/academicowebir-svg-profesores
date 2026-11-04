@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Esquelas - Sistema Academico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="/js/main.js" defer></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/"><img src="/images/sucua2.png" alt="Logo" style="width:40px; height:40px; border-radius:50%; margin-right:8px;">Sistema Academico</a>
+            <a href="/" class="btn btn-outline-light btn-sm"><i class="fas fa-home me-1"></i>Menu Principal</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="fas fa-envelope-open-text me-2"></i>Registro de Esquelas</h4>
+            </div>
+            <div class="card-body">
+
+                <!-- Registrar nueva esquela -->
+                <div class="border rounded p-3 mb-4 bg-light">
+                    <h5 class="mb-3"><i class="fas fa-paper-plane me-2 text-success"></i>Nueva Esquela</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-5 position-relative">
+                            <label class="form-label fw-bold">Buscar Estudiante</label>
+                            <input type="text" class="form-control" id="busquedaEstudiante" placeholder="Cedula o nombre..." autocomplete="off">
+                            <div id="listaEstudiantes" class="list-group position-absolute" style="z-index:10; display:none; max-height:250px; overflow-y:auto;"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Fecha de Envio</label>
+                            <input type="date" class="form-control" id="fechaEnvio">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Motivo <small class="text-muted">(opcional)</small></label>
+                            <input type="text" class="form-control" id="motivoEsquela" placeholder="Motivo del llamado...">
+                        </div>
+                    </div>
+                    <div id="infoEstudiante" class="alert alert-secondary d-none mb-2"></div>
+                    <button class="btn btn-success" onclick="registrarEsquela()"><i class="fas fa-save me-1"></i>Registrar Esquela</button>
+                </div>
+
+                <!-- Listado -->
+                <div class="row mb-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Estado</label>
+                        <select id="filtroEstado" class="form-select form-select-sm" onchange="cargarEsquelas()">
+                            <option value="">Todas</option>
+                            <option value="pendiente">Pendientes de llegada</option>
+                            <option value="atendida">Atendidas (llego el padre)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Buscar en el listado</label>
+                        <input type="text" class="form-control form-control-sm" id="filtroTexto" placeholder="Nombre o cedula..." oninput="cargarEsquelas()">
+                    </div>
+                    <div class="col-md-5 text-end">
+                        <span id="resumenEsquelas" class="text-muted"></span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="tablaEsquelas">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Cedula</th>
+                                <th>Estudiante</th>
+                                <th>Curso</th>
+                                <th>Fecha Envio</th>
+                                <th>Motivo</th>
+                                <th>Fecha Llegada Padre</th>
+                                <th>Estado</th>
+                                <th>Accion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyEsquelas"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal registrar llegada del padre -->
+    <div class="modal fade" id="modalLlegada" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-user-check me-2"></i>Llegada del Padre de Familia</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="llegadaEsquelaId">
+                    <p id="llegadaInfo"></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fecha de llegada</label>
+                        <input type="date" class="form-control" id="fechaLlegada">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" onclick="guardarLlegada()">
+                        <i class="fas fa-save me-1"></i>Guardar Llegada
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal editar esquela -->
+    <div class="modal fade" id="modalEditar" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Esquela</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editarEsquelaId">
+                    <p id="editarInfo"></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fecha de envio</label>
+                        <input type="date" class="form-control" id="editarFechaEnvio">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Motivo</label>
+                        <input type="text" class="form-control" id="editarMotivo">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEdicion()">
+                        <i class="fas fa-save me-1"></i>Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let estudianteSeleccionado = null;
+
+        document.getElementById('fechaEnvio').value = new Date().toISOString().split('T')[0];
+
+        // ===== Buscador de estudiantes =====
+        document.getElementById('busquedaEstudiante').addEventListener('input', async function() {
+            const valor = this.value.trim();
+            const lista = document.getElementById('listaEstudiantes');
+            if (valor.length < 2) { lista.style.display = 'none'; return; }
+            try {
+                const res = await fetch(`/api/esquelas/buscar-estudiante?q=${encodeURIComponent(valor)}`);
+                const data = await res.json();
+                lista.innerHTML = '';
+                if (data.length === 0) { lista.style.display = 'none'; return; }
+                data.forEach(e => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action';
+                    btn.innerHTML = `<strong>${e.cedula}</strong> - ${e.nombres_apellidos} (${e.curso} ${e.paralelo} - ${e.especialidad || 'N/A'})`;
+                    btn.onclick = function() {
+                        estudianteSeleccionado = e;
+                        document.getElementById('busquedaEstudiante').value = `${e.cedula} - ${e.nombres_apellidos}`;
+                        lista.style.display = 'none';
+                        document.getElementById('infoEstudiante').classList.remove('d-none');
+                        document.getElementById('infoEstudiante').innerHTML = `<i class="fas fa-user me-1"></i><strong>${e.nombres_apellidos}</strong> - C.I. ${e.cedula} | ${e.curso} ${e.paralelo} - ${e.especialidad || 'N/A'}`;
+                    };
+                    lista.appendChild(btn);
+                });
+                lista.style.display = 'block';
+            } catch (err) { console.error(err); }
+        });
+
+        document.addEventListener('click', function(e) {
+            const lista = document.getElementById('listaEstudiantes');
+            if (!lista.contains(e.target) && e.target.id !== 'busquedaEstudiante') {
+                lista.style.display = 'none';
+            }
+        });
+
+        // ===== Registrar esquela =====
+        async function registrarEsquela() {
+            if (!estudianteSeleccionado) { showNotification('Seleccione un estudiante', 'warning'); return; }
+            const fecha = document.getElementById('fechaEnvio').value;
+            if (!fecha) { showNotification('Indique la fecha de envio', 'warning'); return; }
+            const motivo = document.getElementById('motivoEsquela').value.trim();
+            try {
+                const res = await fetch('/api/esquelas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estudiante_id: estudianteSeleccionado.id, fecha_envio: fecha, motivo })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showNotification('Esquela registrada', 'success');
+                    document.getElementById('motivoEsquela').value = '';
+                    cargarEsquelas();
+                } else {
+                    showNotification(data.error || 'Error', 'danger');
+                }
+            } catch (err) { console.error(err); showNotification('Error al guardar', 'danger'); }
+        }
+
+        // ===== Listado =====
+        let esquelasCache = [];
+
+        async function cargarEsquelas() {
+            try {
+                const estado = document.getElementById('filtroEstado').value;
+                const q = document.getElementById('filtroTexto').value.trim();
+                let url = '/api/esquelas?';
+                if (estado) url += `estado=${estado}&`;
+                if (q) url += `q=${encodeURIComponent(q)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                esquelasCache = data;
+                const tbody = document.getElementById('tbodyEsquelas');
+                tbody.innerHTML = '';
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Sin esquelas registradas</td></tr>';
+                    document.getElementById('resumenEsquelas').textContent = '';
+                    return;
+                }
+                let pendientes = 0;
+                // mysql2 devuelve DATE como ISO completo (2026-11-04T05:00:00.000Z);
+                // se toma solo la parte YYYY-MM-DD para formatear sin errores
+                const formatearFecha = f => {
+                    if (!f) return null;
+                    const soloFecha = String(f).substring(0, 10);
+                    return new Date(soloFecha + 'T00:00:00').toLocaleDateString('es-ES');
+                };
+                data.forEach((e, i) => {
+                    const fechaEnvio = formatearFecha(e.fecha_envio) || '-';
+                    const fechaLlegada = formatearFecha(e.fecha_llegada);
+                    const estadoBadge = fechaLlegada
+                        ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Atendida</span>'
+                        : '<span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i>Pendiente</span>';
+                    if (!fechaLlegada) pendientes++;
+                    // Solo se pasan IDs al onclick; los datos se buscan en esquelasCache
+                    // (evita problemas de comillas/acentos en los atributos HTML)
+                    const accionLlegada = fechaLlegada ? '' :
+                        `<button class="btn btn-sm btn-success" onclick="abrirModalLlegada(${e.id})" title="Registrar llegada del padre"><i class="fas fa-user-check"></i></button> `;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td>${e.cedula}</td>
+                            <td>${e.nombres_apellidos}</td>
+                            <td>${e.curso} ${e.paralelo}</td>
+                            <td>${fechaEnvio}</td>
+                            <td>${e.motivo || '-'}</td>
+                            <td>${fechaLlegada || '<span class="text-muted">-</span>'}</td>
+                            <td>${estadoBadge}</td>
+                            <td class="text-nowrap">
+                                ${accionLlegada}
+                                <button class="btn btn-sm btn-primary" onclick="abrirModalEditar(${e.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-danger" onclick="eliminarEsquela(${e.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+                });
+                document.getElementById('resumenEsquelas').innerHTML = `<i class="fas fa-list me-1"></i>${data.length} esquela(s) - <strong>${pendientes} pendiente(s)</strong>`;
+            } catch (err) { console.error(err); showNotification('Error al cargar esquelas', 'danger'); }
+        }
+
+        function buscarEsquela(id) {
+            return esquelasCache.find(x => x.id === id);
+        }
+
+        // ===== Llegada del padre =====
+        function abrirModalLlegada(id) {
+            const e = buscarEsquela(id);
+            if (!e) return;
+            document.getElementById('llegadaEsquelaId').value = id;
+            document.getElementById('llegadaInfo').innerHTML = `<strong>Estudiante:</strong> ${e.nombres_apellidos} (${e.cedula})`;
+            document.getElementById('fechaLlegada').value = new Date().toISOString().split('T')[0];
+            new bootstrap.Modal(document.getElementById('modalLlegada')).show();
+        }
+
+        async function guardarLlegada() {
+            const id = document.getElementById('llegadaEsquelaId').value;
+            const fecha = document.getElementById('fechaLlegada').value;
+            if (!fecha) { showNotification('Indique la fecha de llegada', 'warning'); return; }
+            try {
+                const res = await fetch(`/api/esquelas/${id}/llegada`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fecha_llegada: fecha })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalLlegada')).hide();
+                    showNotification('Llegada del padre registrada', 'success');
+                    cargarEsquelas();
+                } else {
+                    showNotification(data.error || 'Error', 'danger');
+                }
+            } catch (err) { console.error(err); showNotification('Error al guardar', 'danger'); }
+        }
+
+        // ===== Editar esquela =====
+        function abrirModalEditar(id) {
+            const e = buscarEsquela(id);
+            if (!e) return;
+            document.getElementById('editarEsquelaId').value = id;
+            document.getElementById('editarInfo').innerHTML = `<strong>Estudiante:</strong> ${e.nombres_apellidos} (${e.cedula})`;
+            document.getElementById('editarFechaEnvio').value = (e.fecha_envio || '').substring(0, 10);
+            document.getElementById('editarMotivo').value = e.motivo || '';
+            new bootstrap.Modal(document.getElementById('modalEditar')).show();
+        }
+
+        async function guardarEdicion() {
+            const id = document.getElementById('editarEsquelaId').value;
+            const fecha = document.getElementById('editarFechaEnvio').value;
+            const motivo = document.getElementById('editarMotivo').value.trim();
+            if (!fecha) { showNotification('Indique la fecha de envio', 'warning'); return; }
+            try {
+                const res = await fetch(`/api/esquelas/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fecha_envio: fecha, motivo })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide();
+                    showNotification('Esquela actualizada', 'success');
+                    cargarEsquelas();
+                } else {
+                    showNotification(data.error || 'Error', 'danger');
+                }
+            } catch (err) { console.error(err); showNotification('Error al guardar', 'danger'); }
+        }
+
+        // ===== Eliminar =====
+        async function eliminarEsquela(id) {
+            if (!confirm('Eliminar este registro de esquela? (Solo se elimina la esquela, no las notas del estudiante)')) return;
+            try {
+                await fetch(`/api/esquelas/${id}`, { method: 'DELETE' });
+                showNotification('Esquela eliminada', 'info');
+                cargarEsquelas();
+            } catch (err) { console.error(err); showNotification('Error al eliminar', 'danger'); }
+        }
+
+        // Cargar listado al iniciar
+        document.addEventListener('DOMContentLoaded', cargarEsquelas);
+    </script>
+</body>
+</html>

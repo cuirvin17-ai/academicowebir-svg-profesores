@@ -156,6 +156,7 @@ const rectorRoutes = require('./routes/rector');
 const inspectorRoutes = require('./routes/inspector');
 const recuperacionRoutes = require('./routes/recuperacion');
 const justificacionesRoutes = require('./routes/justificaciones');
+const esquelasRoutes = require('./routes/esquelas');
 const diagnosticoRoutes = require('./routes/diagnostico');
 const anioLectivosRoutes = require('./routes/anio_lectivos');
 const cursosRoutes = require('./routes/cursos');
@@ -189,6 +190,7 @@ app.use('/api/informes', requireAuth, injectDB, informesRoutes);
 app.use('/api/recursos', requireAuth, injectDB, recursosRoutes);
 app.use('/api/recuperacion', requireAuth, injectDB, recuperacionRoutes);
 app.use('/api/justificaciones', requireAuth, injectDB, justificacionesRoutes);
+app.use('/api/esquelas', requireAuth, requireRole('docente'), injectDB, esquelasRoutes);
 app.use('/api/diagnostico', requireAuth, injectDB, diagnosticoRoutes);
 app.use('/api/tutor', requireAuth, injectDB, tutorRoutes);
 
@@ -275,6 +277,31 @@ app.use('/api/tutor', requireAuth, injectDB, tutorRoutes);
         console.log('Migración: tabla historial_comportamiento verificada');
     } catch (err) {
         console.log('Migración historial_comportamiento:', err.message);
+    }
+
+    // Migración: registro de esquelas (fecha de envio y llegada del padre)
+    try {
+        const db = getPool();
+        await db.query(`CREATE TABLE IF NOT EXISTS esquelas (
+            id INT NOT NULL AUTO_INCREMENT,
+            estudiante_id INT NOT NULL,
+            fecha_envio DATE NOT NULL,
+            fecha_llegada DATE DEFAULT NULL,
+            motivo VARCHAR(255) DEFAULT NULL,
+            registrado_por VARCHAR(100) DEFAULT NULL,
+            school_id INT DEFAULT NULL,
+            anio_lectivo VARCHAR(20) DEFAULT '2026-2027',
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_estudiante (estudiante_id),
+            KEY idx_fecha_envio (fecha_envio),
+            CONSTRAINT fk_esquelas_estudiante FOREIGN KEY (estudiante_id)
+                REFERENCES estudiantes (id) ON DELETE CASCADE
+        )`);
+        console.log('Migración: tabla esquelas verificada');
+    } catch (err) {
+        console.log('Migración esquelas:', err.message);
     }
 })();
 
