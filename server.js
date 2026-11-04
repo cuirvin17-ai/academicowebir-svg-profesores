@@ -288,6 +288,7 @@ app.use('/api/tutor', requireAuth, injectDB, tutorRoutes);
             fecha_envio DATE NOT NULL,
             fecha_llegada DATE DEFAULT NULL,
             motivo VARCHAR(255) DEFAULT NULL,
+            observacion TEXT DEFAULT NULL,
             registrado_por VARCHAR(100) DEFAULT NULL,
             school_id INT DEFAULT NULL,
             anio_lectivo VARCHAR(20) DEFAULT '2026-2027',
@@ -302,6 +303,18 @@ app.use('/api/tutor', requireAuth, injectDB, tutorRoutes);
         console.log('Migración: tabla esquelas verificada');
     } catch (err) {
         console.log('Migración esquelas:', err.message);
+    }
+
+    // Migración: observación de la visita del representante en esquelas
+    try {
+        const db = getPool();
+        const [cols] = await db.query("SHOW COLUMNS FROM esquelas LIKE 'observacion'");
+        if (cols.length === 0) {
+            await db.query("ALTER TABLE esquelas ADD COLUMN observacion TEXT DEFAULT NULL AFTER motivo");
+            console.log('Migración: columna observacion agregada a esquelas');
+        }
+    } catch (err) {
+        console.log('Migración esquelas observacion:', err.message);
     }
 })();
 

@@ -138,6 +138,23 @@ router.put('/:id/llegada', async (req, res) => {
     }
 });
 
+// Guardar la observación de la visita del representante
+router.put('/:id/observacion', async (req, res) => {
+    const db = req.db;
+    const { observacion } = req.body;
+    try {
+        const [rows] = await db.query('SELECT id FROM esquelas WHERE id = ?', [req.params.id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Esquela no encontrada' });
+        }
+        await db.query('UPDATE esquelas SET observacion = ? WHERE id = ?',
+            [observacion ? observacion.trim() : null, req.params.id]);
+        res.json({ message: 'Observación guardada' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Corregir fecha de envio o motivo de una esquela
 router.put('/:id', async (req, res) => {
     const db = req.db;

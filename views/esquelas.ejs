@@ -130,6 +130,7 @@
                                 <th>Fecha Llegada Padre</th>
                                 <th>Estado</th>
                                 <th>Accion</th>
+                                <th>Observacion</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyEsquelas"></tbody>
@@ -189,6 +190,35 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" onclick="guardarEdicion()">
                         <i class="fas fa-save me-1"></i>Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal observacion de la visita del representante -->
+    <div class="modal fade" id="modalObservacion" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title"><i class="fas fa-sticky-note me-2"></i>Observacion de la Visita</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="observacionEsquelaId">
+                    <p id="observacionInfo"></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Observacion del representante</label>
+                        <textarea class="form-control" id="textoObservacion" rows="4" maxlength="1000"
+                            placeholder="Ej: El representante llego al llamado, se converso sobre el rendimiento academico..."></textarea>
+                        <small class="text-muted">Escriba lo ocurrido en la visita del padre o representante.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" onclick="limpiarObservacion()">Vaciar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarObservacion()">
+                        <i class="fas fa-save me-1"></i>Guardar Observacion
                     </button>
                 </div>
             </div>
@@ -329,7 +359,7 @@
                 const tbody = document.getElementById('tbodyEsquelas');
                 tbody.innerHTML = '';
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Sin esquelas registradas</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Sin esquelas registradas</td></tr>';
                     document.getElementById('resumenEsquelas').textContent = '';
                     return;
                 }
@@ -359,6 +389,16 @@
                                 ${accionLlegada}
                                 <button class="btn btn-sm btn-primary" onclick="abrirModalEditar(${e.id})" title="Editar"><i class="fas fa-edit"></i></button>
                                 <button class="btn btn-sm btn-danger" onclick="eliminarEsquela(${e.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-start gap-1">
+                                    <div style="max-width:240px; white-space:normal; font-size:12px;" title="${escaparHtml(e.observacion || '')}">
+                                        ${e.observacion ? escaparHtml(e.observacion) : '<span class="text-muted">Sin observacion</span>'}
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalObservacion(${e.id})" title="Editar observacion de la visita del representante">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>`;
                 });
@@ -434,6 +474,40 @@
             } catch (err) { console.error(err); showNotification('Error al guardar', 'danger'); }
         }
 
+        // ===== Observacion de la visita del representante =====
+        function abrirModalObservacion(id) {
+            const e = buscarEsquela(id);
+            if (!e) return;
+            document.getElementById('observacionEsquelaId').value = id;
+            document.getElementById('observacionInfo').innerHTML = `<strong>Estudiante:</strong> ${escaparHtml(e.nombres_apellidos)} (${escaparHtml(e.cedula)})`;
+            document.getElementById('textoObservacion').value = e.observacion || '';
+            new bootstrap.Modal(document.getElementById('modalObservacion')).show();
+        }
+
+        function limpiarObservacion() {
+            document.getElementById('textoObservacion').value = '';
+        }
+
+        async function guardarObservacion() {
+            const id = document.getElementById('observacionEsquelaId').value;
+            const observacion = document.getElementById('textoObservacion').value.trim();
+            try {
+                const res = await fetch(`/api/esquelas/${id}/observacion`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ observacion })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalObservacion')).hide();
+                    showNotification(observacion ? 'Observacion guardada' : 'Observacion vaciada', 'success');
+                    await cargarEsquelas();
+                } else {
+                    showNotification(data.error || 'Error', 'danger');
+                }
+            } catch (err) { console.error(err); showNotification('Error al guardar', 'danger'); }
+        }
+
         // ===== Descargas (Excel y PDF de las esquelas listadas) =====
         function resumenFiltros() {
             const partes = [];
@@ -455,7 +529,7 @@
             if (typeof XLSX === 'undefined') { showNotification('Libreria Excel no cargada. Recargue la pagina.', 'danger'); return; }
             const datos = [[
                 '#', 'Cedula', 'Estudiante', 'Curso', 'Paralelo', 'Especialidad',
-                'Fecha de Envio', 'Motivo', 'Fecha de Llegada del Padre', 'Estado', 'Registrado por'
+                'Fecha de Envio', 'Motivo', 'Fecha de Llegada del Padre', 'Estado', 'Observacion', 'Registrado por'
             ]];
             esquelasCache.forEach((e, i) => {
                 datos.push([
@@ -469,13 +543,14 @@
                     e.motivo || '',
                     formatearFecha(e.fecha_llegada) || '',
                     e.fecha_llegada ? 'Atendida' : 'Pendiente',
+                    e.observacion || '',
                     e.registrado_por || ''
                 ]);
             });
             const ws = XLSX.utils.aoa_to_sheet(datos);
             ws['!cols'] = [
                 { wch: 4 }, { wch: 13 }, { wch: 38 }, { wch: 10 }, { wch: 9 }, { wch: 18 },
-                { wch: 14 }, { wch: 30 }, { wch: 22 }, { wch: 12 }, { wch: 22 }
+                { wch: 14 }, { wch: 30 }, { wch: 22 }, { wch: 12 }, { wch: 40 }, { wch: 22 }
             ];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Esquelas');
@@ -498,6 +573,7 @@
                     <td style="border:1px solid #999; padding:4px;">${escaparHtml(e.motivo) || '-'}</td>
                     <td style="border:1px solid #999; padding:4px; text-align:center;">${formatearFecha(e.fecha_llegada) || '-'}</td>
                     <td style="border:1px solid #999; padding:4px; text-align:center;">${e.fecha_llegada ? 'Atendida' : 'Pendiente'}</td>
+                    <td style="border:1px solid #999; padding:4px;">${escaparHtml(e.observacion) || '-'}</td>
                 </tr>`).join('');
 
             const tabla = `
@@ -513,6 +589,7 @@
                             <th style="border:1px solid #999; padding:5px;">Motivo</th>
                             <th style="border:1px solid #999; padding:5px;">F. Llegada Padre</th>
                             <th style="border:1px solid #999; padding:5px;">Estado</th>
+                            <th style="border:1px solid #999; padding:5px;">Observacion</th>
                         </tr>
                     </thead>
                     <tbody>${filas}</tbody>
